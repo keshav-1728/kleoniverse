@@ -101,13 +101,40 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
 }
 
 function App() {
-  const [cart, setCart] = useState([]);
-  const [wishlist, setWishlist] = useState([]);
+  const [cart, setCart] = useState(() => {
+    // Load cart from localStorage synchronously on initial render
+    try {
+      return JSON.parse(localStorage.getItem('kleoniverse_cart') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [wishlist, setWishlist] = useState(() => {
+    // Load wishlist from localStorage synchronously on initial render
+    try {
+      return JSON.parse(localStorage.getItem('kleoniverse_wishlist') || '[]');
+    } catch {
+      return [];
+    }
+  });
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check authentication synchronously on initial render
+    const token = localStorage.getItem('kleoni_token');
+    const userData = localStorage.getItem('kleoni_user');
+    return !!(token && userData);
+  });
+  const [user, setUser] = useState(() => {
+    // Load user from localStorage synchronously on initial render
+    try {
+      const userData = localStorage.getItem('kleoni_user');
+      return userData ? JSON.parse(userData) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [loading, setLoading] = useState(false); // Set to false since we're loading synchronously now
 
   // Initialize auth and load data
   useEffect(() => {
