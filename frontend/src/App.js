@@ -103,25 +103,30 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
 }
 
 function App() {
-  // Debug: Log localStorage contents on mount
+  // IMMEDIATE debug logging - this runs FIRST before any React rendering
   const token = localStorage.getItem('kleoni_token');
   const userData = localStorage.getItem('kleoni_user');
-  console.log('App mounting - localStorage check:');
-  console.log('  kleoni_token:', token ? 'exists' : 'missing');
-  console.log('  kleoni_user:', userData ? 'exists' : 'missing');
   
-  let initialUser = null;
+  console.log('%c=== APP MOUNT DEBUG ===', 'color: blue; font-weight: bold');
+  console.log('1. localStorage token:', token ? 'EXISTS (' + token.substring(0, 20) + '...)' : 'MISSING');
+  console.log('2. localStorage userData:', userData ? 'EXISTS' : 'MISSING');
+  console.log('3. userData preview:', userData ? userData.substring(0, 100) : 'N/A');
+  
+  let parsedUser = null;
+  let parsedIsAuth = false;
+  
   try {
     if (userData) {
-      initialUser = JSON.parse(userData);
+      parsedUser = JSON.parse(userData);
+      console.log('4. Parsed user email:', parsedUser?.email);
     }
   } catch (e) {
-    console.error('Failed to parse user data:', e);
+    console.error('5. JSON parse error:', e);
   }
   
-  const initialIsAuthenticated = !!(token && userData);
-  console.log('  Initial isAuthenticated:', initialIsAuthenticated);
-  console.log('  Initial user:', initialUser?.email || 'none');
+  parsedIsAuth = !!(token && userData);
+  console.log('6. Calculated isAuthenticated:', parsedIsAuth);
+  console.log('=========================');
   
   const [cart, setCart] = useState(() => {
     try {
@@ -139,8 +144,8 @@ function App() {
   });
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(initialIsAuthenticated);
-  const [user, setUser] = useState(initialUser);
+  const [isAuthenticated, setIsAuthenticated] = useState(parsedIsAuth);
+  const [user, setUser] = useState(parsedUser);
   const [loading, setLoading] = useState(false);
 
   // Initialize auth and load data
