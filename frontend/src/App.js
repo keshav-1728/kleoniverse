@@ -102,12 +102,26 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
 
 function App() {
   // Debug: Log localStorage contents on mount
+  const token = localStorage.getItem('kleoni_token');
+  const userData = localStorage.getItem('kleoni_user');
   console.log('App mounting - localStorage check:');
-  console.log('  kleoni_token:', localStorage.getItem('kleoni_token') ? 'exists' : 'missing');
-  console.log('  kleoni_user:', localStorage.getItem('kleoni_user') ? 'exists' : 'missing');
+  console.log('  kleoni_token:', token ? 'exists' : 'missing');
+  console.log('  kleoni_user:', userData ? 'exists' : 'missing');
+  
+  let initialUser = null;
+  try {
+    if (userData) {
+      initialUser = JSON.parse(userData);
+    }
+  } catch (e) {
+    console.error('Failed to parse user data:', e);
+  }
+  
+  const initialIsAuthenticated = !!(token && userData);
+  console.log('  Initial isAuthenticated:', initialIsAuthenticated);
+  console.log('  Initial user:', initialUser?.email || 'none');
   
   const [cart, setCart] = useState(() => {
-    // Load cart from localStorage synchronously on initial render
     try {
       return JSON.parse(localStorage.getItem('kleoniverse_cart') || '[]');
     } catch {
@@ -115,7 +129,6 @@ function App() {
     }
   });
   const [wishlist, setWishlist] = useState(() => {
-    // Load wishlist from localStorage synchronously on initial render
     try {
       return JSON.parse(localStorage.getItem('kleoniverse_wishlist') || '[]');
     } catch {
@@ -124,24 +137,8 @@ function App() {
   });
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check authentication synchronously on initial render
-    const token = localStorage.getItem('kleoni_token');
-    const userData = localStorage.getItem('kleoni_user');
-    console.log('  Initial isAuthenticated:', !!(token && userData));
-    return !!(token && userData);
-  });
-  const [user, setUser] = useState(() => {
-    // Load user from localStorage synchronously on initial render
-    try {
-      const userData = localStorage.getItem('kleoni_user');
-      const parsed = userData ? JSON.parse(userData) : null;
-      console.log('  Initial user:', parsed?.email || 'none');
-      return parsed;
-    } catch {
-      return null;
-    }
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(initialIsAuthenticated);
+  const [user, setUser] = useState(initialUser);
   const [loading, setLoading] = useState(false);
 
   // Initialize auth and load data
