@@ -16,6 +16,9 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Debug logging
+  console.log('Navbar rendering - isAuthenticated:', isAuthenticated, 'user:', user?.email);
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {

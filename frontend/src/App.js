@@ -34,6 +34,8 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
 
+  console.log('App - Rendering with isAuthenticated:', isAuthenticated, 'user:', user?.email);
+  
   return (
     <div className="App">
       {!isAdminRoute && (
