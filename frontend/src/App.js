@@ -101,6 +101,11 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
 }
 
 function App() {
+  // Debug: Log localStorage contents on mount
+  console.log('App mounting - localStorage check:');
+  console.log('  kleoni_token:', localStorage.getItem('kleoni_token') ? 'exists' : 'missing');
+  console.log('  kleoni_user:', localStorage.getItem('kleoni_user') ? 'exists' : 'missing');
+  
   const [cart, setCart] = useState(() => {
     // Load cart from localStorage synchronously on initial render
     try {
@@ -123,18 +128,21 @@ function App() {
     // Check authentication synchronously on initial render
     const token = localStorage.getItem('kleoni_token');
     const userData = localStorage.getItem('kleoni_user');
+    console.log('  Initial isAuthenticated:', !!(token && userData));
     return !!(token && userData);
   });
   const [user, setUser] = useState(() => {
     // Load user from localStorage synchronously on initial render
     try {
       const userData = localStorage.getItem('kleoni_user');
-      return userData ? JSON.parse(userData) : null;
+      const parsed = userData ? JSON.parse(userData) : null;
+      console.log('  Initial user:', parsed?.email || 'none');
+      return parsed;
     } catch {
       return null;
     }
   });
-  const [loading, setLoading] = useState(false); // Set to false since we're loading synchronously now
+  const [loading, setLoading] = useState(false);
 
   // Initialize auth and load data
   useEffect(() => {
