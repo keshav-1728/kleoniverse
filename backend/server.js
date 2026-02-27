@@ -72,7 +72,18 @@ app.post('/api/v1/auth/login', async (req, res) => {
 // Get current user - returns user data from user ID header
 app.get('/api/v1/auth/profile', async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
+    // Try to get user from token first
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    let userId = req.headers['x-user-id'];
+    
+    // If we have a token but no user-id, get user from token
+    if (!userId && token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        userId = user.id;
+      }
+    }
+    
     if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
     
     // Get profile data using admin client to bypass RLS
@@ -90,6 +101,7 @@ app.get('/api/v1/auth/profile', async (req, res) => {
       name: profile?.full_name || '',
       phone: profile?.phone || '',
       email: profile?.email || '',
+      role: profile?.role || 'user',
       created_at: profile?.created_at
     };
     
