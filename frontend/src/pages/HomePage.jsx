@@ -66,19 +66,19 @@ export default function HomePage({
       id: 'office',
       name: 'Office Ready',
       description: 'Elevated everyday',
-      image: 'https://images.unsplash.com/photo-1605763240004-7e93b172d754?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=800&auto=format&fit=crop&q=80',
     },
     {
       id: 'weekend',
       name: 'Weekend Vibes',
       description: 'Casual comfort',
-      image: 'https://images.unsplash.com/photo-1529139574466-a302d20525a4?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
     },
     {
       id: 'nightout',
       name: 'Night Out',
       description: 'Make a statement',
-      image: 'https://images.unsplash.com/photo-1496747611176-843222e1e57c?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&auto=format&fit=crop&q=80',
     },
   ];
 

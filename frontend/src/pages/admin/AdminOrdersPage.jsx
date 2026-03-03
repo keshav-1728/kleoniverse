@@ -48,9 +48,53 @@ export default function AdminOrdersPage() {
       const data = await res.json();
       
       console.log('Orders response:', res.status, data);
+      console.log('First order items:', JSON.stringify(data.data.orders?.[0]?.items, null, 2));
       
       if (data.success) {
-        setOrders(data.data.orders || []);
+        // Normalize orders for MongoDB _id field and map fields
+        const normalizedOrders = (data.data.orders || []).map(order => {
+          // Process items to ensure consistent field names
+          const processedItems = order.items ? order.items.map(item => ({
+            ...item,
+            product_name: item.name || item.product_name || 'Product',
+            product_size: item.size || item.product_size || '',
+            product_color: item.color || item.product_color || ''
+          })) : [];
+          
+          // Also create order-level aggregate fields for backwards compatibility
+          const productNames = processedItems.map(i => i.product_name).join(', ');
+          const productSizes = processedItems.filter(i => i.product_size).map(i => i.product_size).join(', ');
+          const productColors = processedItems.filter(i => i.product_color).map(i => i.product_color).join(', ');
+          
+          return {
+            ...order,
+            id: order._id || order.id,
+            user: order.userId ? {
+              name: order.userId.name,
+              email: order.userId.email,
+              phone: order.userId.phone
+            } : null,
+            address: order.shippingAddress ? {
+              name: order.shippingAddress.fullName,
+              address_line1: order.shippingAddress.street,
+              city: order.shippingAddress.city,
+              state: order.shippingAddress.state,
+              pincode: order.shippingAddress.postalCode,
+              phone: order.shippingAddress.phone
+            } : null,
+            items: processedItems,
+            // Add order-level aggregate fields for display compatibility
+            product_names: productNames,
+            product_sizes: productSizes,
+            product_colors: productColors,
+            total_amount: order.totalAmount || order.total,
+            status: order.orderStatus || order.status,
+            created_at: order.createdAt || order.created_at,
+            items_count: order.items ? order.items.length : 0
+          };
+        });
+        console.log('Normalized orders:', normalizedOrders[0]);
+        setOrders(normalizedOrders);
       } else if (res.status === 403) {
         toast.error('Access denied. Admin only.');
         navigate('/');
@@ -70,7 +114,7 @@ export default function AdminOrdersPage() {
       const res = await fetch(`${API_URL}/admin/orders/${orderId}/status`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ orderStatus: newStatus })
       });
       const data = await res.json();
       
@@ -208,17 +252,17 @@ export default function AdminOrdersPage() {
                         <div className="max-w-xs">
                           {(order.product_names || (order.items && order.items.length > 0)) ? (
                             <div>
-                              <p className="text-sm font-medium truncate" title={order.product_names || order.items?.map(i => i.product_name).join(', ')}>
-                                {order.product_names || order.items?.map(i => i.product_name).join(', ')}
+                              <p className="text-sm font-medium truncate" title={order.product_names || order.items?.map(i => i.product_name || i.name).join(', ')}>
+                                {order.product_names || order.items?.map(i => i.product_name || i.name).join(', ')}
                               </p>
-                              {(order.product_sizes || (order.items && order.items.some(i => i.size))) && (
+                              {(order.product_sizes || (order.items && order.items.some(i => i.product_size || i.size))) && (
                                 <p className="text-xs text-gray-500">
-                                  Size: {order.product_sizes || order.items?.map(i => i.size).join(', ')}
+                                  Size: {order.product_sizes || order.items?.map(i => i.product_size || i.size).join(', ')}
                                 </p>
                               )}
-                              {(order.product_colors || (order.items && order.items.some(i => i.color))) && (
+                              {(order.product_colors || (order.items && order.items.some(i => i.product_color || i.color))) && (
                                 <p className="text-xs text-gray-500">
-                                  Color: {order.product_colors || order.items?.map(i => i.color).join(', ')}
+                                  Color: {order.product_colors || order.items?.map(i => i.product_color || i.color).join(', ')}
                                 </p>
                               )}
                               {order.items_count > 1 && (
@@ -350,7 +394,16 @@ export default function AdminOrdersPage() {
                   <div className="space-y-2">
                     {selectedOrder.items.map((item, idx) => (
                       <div key={idx} className="flex justify-between text-sm">
-                        <span>{item.product_name || 'Product'} x {item.quantity}</span>
+                        <span>
+                          {item.product_name || item.name || 'Product'} 
+                          {(item.product_size || item.size || item.product_color || item.color) && (
+                            <span className="text-gray-500">
+                              {(item.product_size || item.size) ? ` - Size: ${item.product_size || item.size}` : ''}
+                              {(item.product_color || item.color) ? ` - Color: ${item.product_color || item.color}` : ''}
+                            </span>
+                          )}
+                          {' '}x {item.quantity}
+                        </span>
                         <span>₹{item.price * item.quantity}</span>
                       </div>
                     ))}

@@ -28,7 +28,16 @@ export default function OrderTrackingPage() {
         const data = await res.json();
         
         if (data.success) {
-          const foundOrder = data.data.orders?.find(o => o.id === orderId || o.order_number === orderId);
+          // Normalize orders for MongoDB _id field
+          const orders = (data.data.orders || []).map(o => ({
+            ...o,
+            id: o._id || o.id,
+            status: o.orderStatus || o.status,
+            total: o.totalAmount || o.total,
+            order_number: o._id || o.id,
+            created_at: o.createdAt || o.created_at
+          }));
+          const foundOrder = orders.find(o => String(o.id) === String(orderId) || String(o.order_number) === String(orderId));
           setOrder(foundOrder || null);
         }
       } catch (error) {
@@ -153,8 +162,17 @@ export default function OrderTrackingPage() {
 
             <div className="p-6 bg-secondary/30 rounded-xl">
               <h2 className="font-display font-bold text-xl mb-4">Delivery Address</h2>
-              {order.address_id && (
+              {order.shippingAddress ? (
+                <div className="space-y-1">
+                  <p className="font-semibold">{order.shippingAddress.fullName}</p>
+                  <p className="text-muted-foreground">{order.shippingAddress.street}</p>
+                  <p className="text-muted-foreground">{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}</p>
+                  <p className="text-muted-foreground">Phone: {order.shippingAddress.phone}</p>
+                </div>
+              ) : order.address_id ? (
                 <AddressDisplay addressId={order.address_id} />
+              ) : (
+                <p>No address available</p>
               )}
             </div>
           </div>

@@ -181,7 +181,7 @@ export default function TermsAndConditionsPage() {
               </div>
               <p className="text-muted-foreground leading-relaxed">
                 For any questions or concerns regarding these Terms and Conditions, please contact 
-                our customer support team at: <strong>support@kleoniverse.com</strong>
+                our customer support team at: <strong>kleoniverse@gmail.com</strong>
               </p>
             </div>
 

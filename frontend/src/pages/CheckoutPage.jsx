@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { MapPin, Lock, Plus, Loader2 } from 'lucide-react';
-import { saveAddress, createOrder } from '@/services/supabaseService';
+import { saveAddress, createOrder } from '@/services/apiService';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
@@ -81,10 +81,22 @@ export default function CheckoutPage({ cart, onLogin, setCart }) {
     try {
       const res = await fetch(`${API_URL}/addresses`, { headers: getAuthHeaders() });
       const data = await res.json();
+      console.log('Fetch addresses response:', data);
       if (data.success) {
-        setAddresses(data.data.addresses || []);
+        const addrList = data.data?.addresses || [];
+        // Handle both _id and id formats from MongoDB, and map backend field names to frontend
+        const normalized = addrList.map(addr => ({
+          ...addr,
+          id: addr._id || addr.id,
+          // Map backend fields to frontend expected fields
+          name: addr.fullName || addr.name,
+          address_line1: addr.street || addr.address,
+          pincode: addr.postalCode || addr.pincode,
+          is_default: addr.isDefault || addr.is_default
+        }));
+        setAddresses(normalized);
         // Select default address
-        const defaultAddr = data.data.addresses?.find(a => a.is_default);
+        const defaultAddr = normalized.find(a => a.is_default);
         if (defaultAddr) setSelectedAddress(defaultAddr.id);
       }
     } catch (error) {
@@ -104,9 +116,11 @@ export default function CheckoutPage({ cart, onLogin, setCart }) {
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('kleoni_token', data.data.session.access_token);
-        localStorage.setItem('kleoni_refresh_token', data.data.session.refresh_token);
-        localStorage.setItem('kleoni_user_id', data.data.session.user_id);
+        // Handle both old Supabase format and new MongoDB format
+        const token = data.data.session?.access_token || data.data.token;
+        const userId = data.data.session?.user_id || data.data.user?.id;
+        localStorage.setItem('kleoni_token', token);
+        localStorage.setItem('kleoni_user_id', userId);
         localStorage.setItem('kleoni_user', JSON.stringify(data.data.user));
         setIsAuthenticated(true);
         setUser(data.data.user);
@@ -196,23 +210,33 @@ export default function CheckoutPage({ cart, onLogin, setCart }) {
       return;
     }
     
+    // Calculate total
+    const subtotal = validCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const shipping = paymentMethod === 'cod' ? 50 : (subtotal > 1500 ? 0 : 50);
+    const totalAmount = subtotal + shipping;
+    
     setPlacingOrder(true);
     try {
+      // Format items for backend - need product and variant as MongoDB ObjectIds
+      const orderItems = validCart.map(item => ({
+        product: item.product_id,
+        variant: item.id, // This should be the variant ID
+        name: item.name,
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image
+      }));
+      
       const res = await fetch(`${API_URL}/orders`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          address_id: selectedAddress,
-          payment_method: paymentMethod,
-          items: validCart.map(item => ({
-            product_id: item.id,
-            name: item.name,
-            size: item.size,
-            color: item.color,
-            quantity: item.quantity,
-            price: item.price,
-            image: item.image
-          }))
+          items: orderItems,
+          totalAmount: totalAmount,
+          shippingAddress: selectedAddress,
+          paymentStatus: paymentMethod === 'prepaid' ? 'paid' : 'pending'
         })
       });
       const data = await res.json();
@@ -494,7 +518,7 @@ export default function CheckoutPage({ cart, onLogin, setCart }) {
               ) : (
                 <div className="text-sm text-muted-foreground">
                   {addresses.find(a => a.id === selectedAddress) && (
-                    <p>Delivering to {addresses.find(a => a.id === selectedAddress).city}, {addresses.find(a => a.id === selectedAddress).pincode}</p>
+                    <p>Delivering to {addresses.find(a => a.id === selectedAddress).city}, {addresses.find(a => a.id === selectedAddress).postalCode || addresses.find(a => a.id === selectedAddress).pincode}</p>
                   )}
                 </div>
               )}

@@ -20,7 +20,7 @@ const api: AxiosInstance = axios.create({
 // Request interceptor - add auth token
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('kleoni_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }

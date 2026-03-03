@@ -78,7 +78,17 @@ export default function AdminProductsPage() {
       const data = await res.json();
       
       if (data.success) {
-        setProducts(data.data.products);
+        // Normalize product data to handle different field names from backend
+        const normalizedProducts = data.data.products.map(product => ({
+          ...product,
+          // Handle price field mapping (backend may return basePrice)
+          price: product.basePrice || product.price,
+          // Handle status field (backend sends 'active'/'inactive', frontend expects is_active)
+          is_active: product.status === 'active',
+          // Also keep status for reference
+          status: product.status || 'active'
+        }));
+        setProducts(normalizedProducts);
       } else if (res.status === 403) {
         toast.error('Access denied. Admin only.');
         navigate('/');

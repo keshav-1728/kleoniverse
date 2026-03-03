@@ -30,7 +30,14 @@ export const Footer = () => {
             <h4 className="font-display font-bold text-lg mb-4">About</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li><Link to="/our-story" className="hover:text-foreground transition-colors">Our Story</Link></li>
-            
+              <li className="pt-2">
+                <span className="block text-xs text-muted-foreground">Contact:</span>
+                <a href="mailto:kleoniverse@gmail.com" className="hover:text-foreground transition-colors">kleoniverse@gmail.com</a>
+              </li>
+              <li>
+                <span className="block text-xs text-muted-foreground">Phone:</span>
+                <a href="tel:+918218142174" className="hover:text-foreground transition-colors">(+91) 8218142174</a>
+              </li>
             </ul>
           </div>
 

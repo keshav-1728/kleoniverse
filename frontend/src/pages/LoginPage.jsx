@@ -64,26 +64,21 @@ export default function LoginPage({ onLogin }) {
     e.preventDefault();
     setLoading(true);
     try {
-      // Split name into first and last name
-      const nameParts = signupName.trim().split(' ');
-      const firstName = nameParts[0] || '';
-      const lastName = nameParts.slice(1).join(' ') || '';
-      
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           email: signupEmail, 
           password: signupPassword,
-          firstName,
-          lastName
+          name: signupName,
+          phone: signupPhone
         })
       });
       
       const result = await response.json();
       
       if (result.success) {
-        toast.success('Account created! Please check your email to verify your account, then login.');
+        toast.success('Account created! You can now login.');
         // Switch to login tab
         document.querySelector('[value="login"]')?.click();
       } else {

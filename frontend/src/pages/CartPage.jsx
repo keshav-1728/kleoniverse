@@ -10,8 +10,8 @@ export default function CartPage({ cart, onUpdateQuantity, onRemoveItem }) {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
 
-  // Filter out invalid cart items (those without price or with NaN)
-  const validCart = cart.filter(item => item && typeof item.price === 'number' && !isNaN(item.price) && item.price > 0);
+  // Filter out truly invalid cart items (no price at all)
+  const validCart = cart.filter(item => item && item.price != null && item.price > 0);
   
   // Update parent if there are invalid items
   useEffect(() => {

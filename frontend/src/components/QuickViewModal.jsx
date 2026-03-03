@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-export const QuickViewModal = ({ open, onClose, product, onAddToCart, wishlist = [], onToggleWishlist }) => {
+export const QuickViewModal = ({ open, onClose, product, onAddToCart, wishlist = [], onToggleWishlist, onOpenCart }) => {
   const navigate = useNavigate();
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -36,6 +36,10 @@ export const QuickViewModal = ({ open, onClose, product, onAddToCart, wishlist =
       image: product.images[0]
     });
     toast.success('Added to cart!');
+    // Open cart drawer after adding
+    if (onOpenCart) {
+      onOpenCart();
+    }
     onClose();
   };
 

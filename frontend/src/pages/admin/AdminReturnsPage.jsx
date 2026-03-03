@@ -21,25 +21,44 @@ export default function AdminReturnsPage() {
     fetchReturns();
   }, [statusFilter]);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('kleoni_token');
+    return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : {};
+  };
+
   const fetchReturns = async () => {
     try {
-      const token = localStorage.getItem('token');
       const url = statusFilter 
-        ? `${API_URL}/api/v1/admin/returns?status=${statusFilter}`
-        : `${API_URL}/api/v1/admin/returns`;
+        ? `${API_URL}/admin/returns?status=${statusFilter}`
+        : `${API_URL}/admin/returns`;
       
       const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders()
       });
 
       const data = await response.json();
       
+      console.log('Admin returns response:', data);
+      
       if (data.success) {
-        setReturns(data.data.returns || []);
+        // Normalize returns for MongoDB _id field and fix field names
+        const normalizedReturns = (data.data.returns || []).map(ret => ({
+          ...ret,
+          id: ret._id || ret.id,
+          // Fix field names to match frontend expectations
+          user: ret.user || { full_name: 'Unknown', email: 'N/A' },
+          order: ret.order || { order_number: 'N/A' },
+          order_item: ret.order_item || (ret.items && ret.items.length > 0 ? {
+            product_name: ret.items[0].name || ret.items[0].product_name || 'Product',
+            size: ret.items[0].size || ret.items[0].product_size || '',
+            color: ret.items[0].color || ret.items[0].product_color || ''
+          } : null),
+          // Fix created_at field
+          created_at: ret.createdAt || ret.created_at || new Date().toISOString()
+        }));
+        setReturns(normalizedReturns);
       } else {
+        console.error('Error response:', data);
         toast({
           title: 'Error',
           description: data.message || 'Failed to fetch returns',
@@ -63,13 +82,9 @@ export default function AdminReturnsPage() {
     
     setUpdating(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_URL}/api/v1/admin/returns/${selectedReturn.id}/status`, {
+      const response = await fetch(`${API_URL}/admin/returns/${selectedReturn.id}/status`, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           status: newStatus,
           admin_notes: adminNotes,

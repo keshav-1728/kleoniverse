@@ -43,7 +43,12 @@ export default function AdminUsersPage() {
       const data = await res.json();
       
       if (data.success) {
-        setUsers(data.data.users);
+        // Normalize users for MongoDB _id field
+        const normalizedUsers = (data.data.users || []).map(user => ({
+          ...user,
+          id: user._id || user.id
+        }));
+        setUsers(normalizedUsers);
       } else if (res.status === 403) {
         toast.error('Access denied. Admin only.');
         navigate('/');

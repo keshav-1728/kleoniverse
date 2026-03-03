@@ -55,21 +55,42 @@ export default function AccountDashboardPage() {
       const ordersRes = await fetch(`${API_URL}/orders`, { headers: getAuthHeaders() });
       const ordersData = await ordersRes.json();
       if (ordersData.success) {
-        setOrders(ordersData.data.orders || []);
+        // Normalize orders for MongoDB _id field and map orderStatus to status
+        const normalizedOrders = (ordersData.data.orders || []).map(order => ({
+          ...order,
+          id: order._id || order.id,
+          status: order.orderStatus || order.status
+        }));
+        setOrders(normalizedOrders);
       }
 
       // Fetch addresses
       const addrRes = await fetch(`${API_URL}/addresses`, { headers: getAuthHeaders() });
       const addrData = await addrRes.json();
       if (addrData.success) {
-        setAddresses(addrData.data.addresses || []);
+        // Normalize addresses for MongoDB _id field and map backend fields to frontend
+        const normalizedAddrs = (addrData.data.addresses || []).map(addr => ({
+          ...addr,
+          id: addr._id || addr.id,
+          // Map backend fields to frontend expected fields
+          name: addr.fullName || addr.name,
+          address_line1: addr.street || addr.address,
+          pincode: addr.postalCode || addr.pincode,
+          is_default: addr.isDefault || addr.is_default
+        }));
+        setAddresses(normalizedAddrs);
       }
 
       // Fetch returns
       const returnsRes = await fetch(`${API_URL}/returns`, { headers: getAuthHeaders() });
       const returnsData = await returnsRes.json();
       if (returnsData.success) {
-        setReturns(returnsData.data.returns || []);
+        // Normalize returns for MongoDB _id field
+        const normalizedReturns = (returnsData.data.returns || []).map(ret => ({
+          ...ret,
+          id: ret._id || ret.id
+        }));
+        setReturns(normalizedReturns);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

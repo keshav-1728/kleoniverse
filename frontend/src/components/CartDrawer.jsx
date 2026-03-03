@@ -8,8 +8,10 @@ import { Separator } from '@/components/ui/separator';
 export const CartDrawer = ({ open, onClose, cart, onUpdateQuantity, onRemoveItem }) => {
   const navigate = useNavigate();
   
-  // Filter out invalid cart items (those without price or with NaN)
-  const validCart = cart.filter(item => item && typeof item.price === 'number' && !isNaN(item.price) && item.price > 0);
+  console.log('CartDrawer rendering, cart:', cart);
+  
+  // Filter out truly invalid cart items (no price at all)
+  const validCart = cart.filter(item => item && item.price != null && item.price > 0);
   
   const subtotal = validCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const shipping = subtotal > 1500 ? 0 : 50;

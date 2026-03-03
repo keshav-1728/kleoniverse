@@ -247,10 +247,24 @@ export default function HelpCenterPage() {
                 For general inquiries
               </p>
               <a 
-                href="mailto:support@kleoniverse.com" 
+                href="mailto:kleoniverse@gmail.com" 
                 className="text-primary font-medium hover:underline"
               >
-                support@kleoniverse.com
+                kleoniverse@gmail.com
+              </a>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-secondary/30">
+              <Phone className="w-8 h-8 text-primary mb-4" />
+              <h3 className="font-bold text-lg mb-2">Call Us</h3>
+              <p className="text-muted-foreground text-sm mb-3">
+                Mon-Sat, 10am-7pm
+              </p>
+              <a 
+                href="tel:+918218142174" 
+                className="text-primary font-medium hover:underline"
+              >
+                (+91) 8218142174
               </a>
             </div>
 

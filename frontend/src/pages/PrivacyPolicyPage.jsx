@@ -192,7 +192,7 @@ export default function PrivacyPolicyPage() {
               </div>
               <p className="text-muted-foreground leading-relaxed">
                 If you have any questions or concerns about this Privacy Policy or our data practices, 
-                please contact our support team at: <strong>support@kleoniverse.com</strong>
+                please contact our support team at: <strong>kleoniverse@gmail.com</strong>
               </p>
             </div>
 

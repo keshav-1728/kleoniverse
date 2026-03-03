@@ -1,52 +1,127 @@
 /**
  * Backend Server for Fashion E-Commerce
- * Uses Supabase as the database
+ * Uses MongoDB as the database
  */
 
 const express = require('express');
 const cors = require('cors');
-const { createClient } = require('@supabase/supabase-js');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Import Models
+const User = require('./src/models/User');
+const Product = require('./src/models/Product');
+const ProductVariant = require('./src/models/ProductVariant');
+const CartItem = require('./src/models/CartItem');
+const Address = require('./src/models/Address');
+const Order = require('./src/models/Order');
+const Wishlist = require('./src/models/Wishlist');
+const Return = require('./src/models/Returns');
+
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Supabase client
-const supabaseUrl = process.env.SUPABASE_URL || 'https://epwpejmbihthqwosdick.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwd3Blam1iaWh0aHF3b3NkaWNrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NTUwODMsImV4cCI6MjA4NzUzMTA4M30.wZKHLg1H2DK5sZdxcstHFf8SRkGV4nU93pqhDqd-TSs';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVwd3Blam1iaWh0aHF3b3NkaWNrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTk1NTA4MywiZXhwIjoyMDg3NTMxMDgzfQ.EV2TMPsJ6Db8h1o_PvMJ3G1I6N2n3gX8P0gT6KzFcWos';
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { autoRefreshToken: false, persistSession: false }
-});
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'kleoniverse_jwt_secret_key_2024';
 
 // Helper function for API responses
 const apiResponse = (success, data = null, message = '') => {
   return { success, data, message };
 };
 
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    // Also check x-user-id header for frontend compatibility
+    const userId = req.headers['x-user-id'];
+    if (userId) {
+      req.userId = userId;
+      return next();
+    }
+    return res.status(401).json(apiResponse(false, null, 'Access token required'));
+  }
+  
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      // Check if it's the x-user-id header as fallback
+      const userId = req.headers['x-user-id'];
+      if (userId) {
+        req.userId = userId;
+        return next();
+      }
+      return res.status(403).json(apiResponse(false, null, 'Invalid token'));
+    }
+    req.userId = user.id;
+    req.userRole = user.role;
+    next();
+  });
+};
+
+// Middleware to verify admin role
+const requireAdmin = (req, res, next) => {
+  if (req.userRole !== 'admin') {
+    return res.status(403).json(apiResponse(false, null, 'Admin access required'));
+  }
+  next();
+};
+
 // ============================================================================
 // AUTH ROUTES
 // ============================================================================
 
-// Register (uses Supabase Auth)
+// Register
 app.post('/api/v1/auth/register', async (req, res) => {
   try {
     const { email, password, name, phone } = req.body;
-    const { data, error } = await supabase.auth.signUp({
+    
+    if (!email || !password || !name) {
+      return res.status(400).json(apiResponse(false, null, 'Email, password and name are required'));
+    }
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json(apiResponse(false, null, 'Email already registered'));
+    }
+    
+    // Create new user
+    const user = new User({
+      name,
       email,
       password,
-      options: { data: { full_name: name, phone } }
+      phone: phone || ''
     });
-    if (error) throw error;
-    res.json(apiResponse(true, { user: data.user, session: data.session }, 'Registration successful'));
+    
+    await user.save();
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.status(201).json(apiResponse(true, {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      },
+      token
+    }, 'Registration successful'));
   } catch (error) {
-    res.status(400).json(apiResponse(false, null, error.message));
+    console.error('Register error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
@@ -54,105 +129,103 @@ app.post('/api/v1/auth/register', async (req, res) => {
 app.post('/api/v1/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    res.json(apiResponse(true, { 
-      user: data.user, 
-      session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-        user_id: data.user.id
-      }
+    
+    if (!email || !password) {
+      return res.status(400).json(apiResponse(false, null, 'Email and password are required'));
+    }
+    
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json(apiResponse(false, null, 'Invalid email or password'));
+    }
+    
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json(apiResponse(false, null, 'Invalid email or password'));
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    
+    res.json(apiResponse(true, {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      },
+      token
     }, 'Login successful'));
   } catch (error) {
-    res.status(401).json(apiResponse(false, null, error.message));
+    console.error('Login error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Get current user - returns user data from user ID header
-app.get('/api/v1/auth/profile', async (req, res) => {
+// Get current user profile
+app.get('/api/v1/auth/profile', authenticateToken, async (req, res) => {
   try {
-    // Try to get user from token first
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    let userId = req.headers['x-user-id'];
-    
-    // If we have a token but no user-id, get user from token
-    if (!userId && token) {
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) {
-        userId = user.id;
-      }
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) {
+      return res.status(404).json(apiResponse(false, null, 'User not found'));
     }
     
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-    
-    // Get profile data using admin client to bypass RLS
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    
-    if (profileError) console.log('Profile fetch error:', profileError);
-    
-    // Return profile data in a user-like format for frontend compatibility
-    const userData = {
-      id: userId,
-      name: profile?.full_name || '',
-      phone: profile?.phone || '',
-      email: profile?.email || '',
-      role: profile?.role || 'user',
-      created_at: profile?.created_at
-    };
-    
-    res.json(apiResponse(true, { user: userData, profile }));
+    res.json(apiResponse(true, { user }));
   } catch (error) {
-    res.status(401).json(apiResponse(false, null, error.message));
+    console.error('Profile error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Update current user profile
-app.put('/api/v1/auth/profile', async (req, res) => {
+app.put('/api/v1/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-    
     const { name, phone } = req.body;
     
-    // Update profile data in profiles table (not auth.users)
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .upsert({
-        id: userId,
-        full_name: name || '',
-        phone: phone || '',
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json(apiResponse(false, null, 'User not found'));
+    }
     
-    if (profileError) console.log('Profile upsert error:', profileError);
+    if (name) user.name = name;
+    if (phone) user.phone = phone;
     
-    // Return updated user data in format frontend expects
-    res.json(apiResponse(true, { user: { id: userId, name, phone } }, 'Profile updated successfully'));
+    await user.save();
+    
+    res.json(apiResponse(true, {
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role
+      }
+    }, 'Profile updated successfully'));
   } catch (error) {
+    console.error('Profile update error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Get current user (me)
-app.get('/api/v1/auth/me', async (req, res) => {
+app.get('/api/v1/auth/me', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-    
-    const { data: { users }, error } = await supabaseAdmin.auth.admin.listUsers();
-    if (error) throw error;
-    
-    const user = users?.find(u => u.id === userId);
-    if (!user) return res.status(404).json(apiResponse(false, null, 'User not found'));
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) {
+      return res.status(404).json(apiResponse(false, null, 'User not found'));
+    }
     
     res.json(apiResponse(true, user));
   } catch (error) {
-    res.status(401).json(apiResponse(false, null, error.message));
+    console.error('Me error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
@@ -165,111 +238,193 @@ app.get('/api/v1/products', async (req, res) => {
   try {
     const { category, search, limit = 50, offset = 0 } = req.query;
     
-    let query = supabase
-      .from('products')
-      .select('*', { count: 'exact' })
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .range(parseInt(offset), parseInt(offset) + parseInt(limit) - 1);
-
-    if (category) query = query.eq('category', category);
-    if (search) query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
-
-    const { data, error, count } = await query;
-    if (error) throw error;
-
+    let query = {};
+    if (category) query.category = category;
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const total = await Product.countDocuments(query);
+    const products = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit));
+    
     // Get variants for each product
     const productsWithVariants = await Promise.all(
-      (data || []).map(async (product) => {
-        const { data: variants } = await supabase
-          .from('product_variants')
-          .select('size, color, stock, price')
-          .eq('product_id', product.id)
-          .eq('is_active', true);
+      products.map(async (product) => {
+        const variants = await ProductVariant.find({ productId: product._id });
+        
+        // Use product's sizes/colors if no variants, otherwise use variants
+        const sizes = variants.length > 0 
+          ? [...new Set(variants.map(v => v.size))]
+          : (product.sizes || []);
+        const colors = variants.length > 0 
+          ? [...new Set(variants.map(v => v.color))]
+          : (product.colors || []);
         
         return {
-          ...product,
-          price: product.base_price || product.price, // Use base_price as price for frontend
-          sizes: [...new Set(variants?.map(v => v.size) || [])],
-          colors: [...new Set(variants?.map(v => v.color) || [])],
-          variants
+          id: product._id,
+          name: product.name,
+          description: product.description,
+          category: product.category,
+          subcategory: product.subcategory || '',
+          price: product.basePrice,
+          base_price: product.basePrice,
+          discount: product.discount || 0,
+          stock: product.stock || 0,
+          status: product.status || 'active',
+          images: product.images || [],
+          created_at: product.createdAt,
+          sizes: sizes,
+          colors: colors,
+          variants: variants.map(v => ({
+            id: v._id,
+            size: v.size,
+            color: v.color,
+            price: v.price,
+            stock: v.stock,
+            image: v.image
+          }))
         };
       })
     );
-
-    res.json(apiResponse(true, { products: productsWithVariants, total: count }));
+    
+    res.json(apiResponse(true, { products: productsWithVariants, total }));
   } catch (error) {
+    console.error('Products error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Get featured products
-app.get('/api/v1/products/featured', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .eq('is_featured', true)
-      .limit(10);
-    if (error) throw error;
-    
-    // Add price field from base_price
-    const products = (data || []).map(p => ({
-      ...p,
-      price: p.base_price || p.price
-    }));
-    
-    res.json(apiResponse(true, { products }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Get product by ID
+// Get single product
 app.get('/api/v1/products/:id', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { data: product, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .eq('is_active', true)
-      .single();
-    if (error) throw error;
-
-    const { data: variants } = await supabase
-      .from('product_variants')
-      .select('*')
-      .eq('product_id', id)
-      .eq('is_active', true);
-
-    res.json(apiResponse(true, { 
-      product: { 
-        ...product,
-        price: product.base_price || product.price,
-        sizes: [...new Set(variants?.map(v => v.size) || [])],
-        colors: [...new Set(variants?.map(v => v.color) || [])],
-        variants 
-      } 
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json(apiResponse(false, null, 'Product not found'));
+    }
+    
+    const variants = await ProductVariant.find({ productId: product._id });
+    
+    // Use product's sizes/colors if no variants, otherwise use variants
+    const sizes = variants.length > 0 
+      ? [...new Set(variants.map(v => v.size))]
+      : (product.sizes || []);
+    const colors = variants.length > 0 
+      ? [...new Set(variants.map(v => v.color))]
+      : (product.colors || []);
+    
+    res.json(apiResponse(true, {
+      product: {
+        id: product._id,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        subcategory: product.subcategory || '',
+        price: product.basePrice,
+        base_price: product.basePrice,
+        discount: product.discount || 0,
+        stock: product.stock || 0,
+        status: product.status || 'active',
+        images: product.images || [],
+        created_at: product.createdAt,
+        sizes: sizes,
+        colors: colors,
+        variants: variants.map(v => ({
+          id: v._id,
+          size: v.size,
+          color: v.color,
+          price: v.price,
+          stock: v.stock,
+          image: v.image
+        }))
+      }
     }));
   } catch (error) {
+    console.error('Product error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Get categories
-app.get('/api/v1/products/categories', async (req, res) => {
+// Create product (admin)
+app.post('/api/v1/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('products')
-      .select('category')
-      .eq('is_active', true);
-    if (error) throw error;
+    const { name, description, category, basePrice, images, variants } = req.body;
     
-    const categories = [...new Set(data?.map(p => p.category) || [])];
-    res.json(apiResponse(true, { categories }));
+    const product = new Product({
+      name,
+      description: description || '',
+      category: category || 'unisex',
+      basePrice: basePrice || 0,
+      images: images || []
+    });
+    
+    await product.save();
+    
+    // Create variants if provided
+    if (variants && variants.length > 0) {
+      const variantDocs = variants.map(v => ({
+        productId: product._id,
+        size: v.size,
+        color: v.color,
+        price: v.price || basePrice,
+        stock: v.stock || 0,
+        image: v.image || ''
+      }));
+      
+      await ProductVariant.insertMany(variantDocs);
+    }
+    
+    res.status(201).json(apiResponse(true, { product }, 'Product created successfully'));
   } catch (error) {
+    console.error('Create product error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Update product (admin)
+app.put('/api/v1/products/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { name, description, category, basePrice, images } = req.body;
+    
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json(apiResponse(false, null, 'Product not found'));
+    }
+    
+    if (name) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (category) product.category = category;
+    if (basePrice !== undefined) product.basePrice = basePrice;
+    if (images) product.images = images;
+    
+    await product.save();
+    
+    res.json(apiResponse(true, { product }, 'Product updated successfully'));
+  } catch (error) {
+    console.error('Update product error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Delete product (admin)
+app.delete('/api/v1/products/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json(apiResponse(false, null, 'Product not found'));
+    }
+    
+    // Delete associated variants
+    await ProductVariant.deleteMany({ productId: req.params.id });
+    
+    res.json(apiResponse(true, null, 'Product deleted successfully'));
+  } catch (error) {
+    console.error('Delete product error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
@@ -279,334 +434,111 @@ app.get('/api/v1/products/categories', async (req, res) => {
 // ============================================================================
 
 // Get cart items
-app.get('/api/v1/cart', async (req, res) => {
+app.get('/api/v1/cart', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    // Use admin client to bypass RLS
-    const { data: cartItems, error } = await supabaseAdmin
-      .from('cart_items')
-      .select(`
-        *,
-        product:products(name, images, category)
-      `)
-      .eq('user_id', userId);
-
-    if (error) throw error;
-    res.json(apiResponse(true, { cart: cartItems || [] }));
+    const cartItems = await CartItem.find({ userId: req.userId });
+    
+    // Get product and variant details for each cart item
+    const itemsWithDetails = await Promise.all(
+      cartItems.map(async (item) => {
+        const product = await Product.findById(item.productId);
+        const variant = await ProductVariant.findById(item.variantId);
+        
+        return {
+          id: item._id,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          price: item.price,
+          product: product ? {
+            id: product._id,
+            name: product.name,
+            description: product.description,
+            images: product.images,
+            basePrice: product.basePrice
+          } : null,
+          variant: variant ? {
+            id: variant._id,
+            size: variant.size,
+            color: variant.color,
+            stock: variant.stock,
+            image: variant.image
+          } : null
+        };
+      })
+    );
+    
+    res.json(apiResponse(true, { items: itemsWithDetails }));
   } catch (error) {
+    console.error('Cart error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Add to cart
-app.post('/api/v1/cart', async (req, res) => {
+app.post('/api/v1/cart', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    const { product_id, size, color, quantity, price } = req.body;
-
-    // Check if item exists - use admin client
-    const { data: existing } = await supabaseAdmin
-      .from('cart_items')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('product_id', product_id)
-      .eq('size', size)
-      .eq('color', color)
-      .single();
-
-    if (existing) {
-      await supabaseAdmin
-        .from('cart_items')
-        .update({ quantity: existing.quantity + quantity })
-        .eq('id', existing.id);
-    } else {
-      await supabaseAdmin
-        .from('cart_items')
-        .insert({ user_id: userId, product_id, size, color, quantity, price });
+    const { productId, variantId, quantity, price } = req.body;
+    
+    if (!productId || !variantId || !quantity || !price) {
+      return res.status(400).json(apiResponse(false, null, 'Missing required fields'));
     }
-
-    res.json(apiResponse(true, null, 'Added to cart'));
+    
+    // Check if item already in cart
+    let cartItem = await CartItem.findOne({ userId: req.userId, variantId });
+    
+    if (cartItem) {
+      cartItem.quantity += quantity;
+      await cartItem.save();
+    } else {
+      cartItem = new CartItem({
+        userId: req.userId,
+        productId,
+        variantId,
+        quantity,
+        price
+      });
+      await cartItem.save();
+    }
+    
+    res.status(201).json(apiResponse(true, { item: cartItem }, 'Item added to cart'));
   } catch (error) {
+    console.error('Add to cart error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Update cart quantity
-app.put('/api/v1/cart/:itemId', async (req, res) => {
+// Update cart item
+app.put('/api/v1/cart/:id', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    const { itemId } = req.params;
     const { quantity } = req.body;
-
-    if (quantity <= 0) {
-      await supabaseAdmin.from('cart_items').delete().eq('id', itemId).eq('user_id', userId);
+    
+    const cartItem = await CartItem.findOne({ _id: req.params.id, userId: req.userId });
+    if (!cartItem) {
+      return res.status(404).json(apiResponse(false, null, 'Cart item not found'));
+    }
+    
+    if (quantity > 0) {
+      cartItem.quantity = quantity;
+      await cartItem.save();
     } else {
-      await supabaseAdmin.from('cart_items').update({ quantity }).eq('id', itemId).eq('user_id', userId);
-    }
-
-    res.json(apiResponse(true));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Remove from cart
-app.delete('/api/v1/cart/:itemId', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    await supabaseAdmin.from('cart_items').delete().eq('id', req.params.itemId).eq('user_id', userId);
-    res.json(apiResponse(true));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Clear cart
-app.delete('/api/v1/cart', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    // Use admin client to bypass RLS
-    await supabaseAdmin.from('cart_items').delete().eq('user_id', userId);
-    res.json(apiResponse(true));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// ============================================================================
-// WISHLIST ROUTES
-// ============================================================================
-
-// Get wishlist items
-app.get('/api/v1/wishlist', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-    
-    const { data, error } = await supabaseAdmin
-      .from('wishlists')
-      .select('*, product:products(*)')
-      .eq('user_id', userId);
-    
-    if (error) throw error;
-    
-    res.json(apiResponse(true, { wishlist: data || [] }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Add to wishlist
-app.post('/api/v1/wishlist', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-    
-    const { product_id } = req.body;
-    if (!product_id) return res.status(400).json(apiResponse(false, null, 'Product ID required'));
-    
-    // Check if already in wishlist
-    const { data: existing } = await supabaseAdmin
-      .from('wishlists')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('product_id', product_id)
-      .single();
-    
-    if (existing) {
-      return res.json(apiResponse(true, { item: existing }, 'Already in wishlist'));
+      await CartItem.deleteOne({ _id: req.params.id });
     }
     
-    const { data, error } = await supabaseAdmin
-      .from('wishlists')
-      .insert({
-        user_id: userId,
-        product_id
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    res.json(apiResponse(true, { item: data }, 'Added to wishlist'));
+    res.json(apiResponse(true, { item: cartItem }, 'Cart updated'));
   } catch (error) {
+    console.error('Update cart error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Remove from wishlist
-app.delete('/api/v1/wishlist/:productId', async (req, res) => {
+// Delete cart item
+app.delete('/api/v1/cart/:id', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-    
-    const { productId } = req.params;
-    
-    const { error } = await supabaseAdmin
-      .from('wishlists')
-      .delete()
-      .eq('user_id', userId)
-      .eq('product_id', productId);
-    
-    if (error) throw error;
-    
-    res.json(apiResponse(true, null, 'Removed from wishlist'));
+    await CartItem.deleteOne({ _id: req.params.id, userId: req.userId });
+    res.json(apiResponse(true, null, 'Item removed from cart'));
   } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// ============================================================================
-// ADDRESS ROUTES
-// ============================================================================
-
-// Get addresses
-app.get('/api/v1/addresses', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    // Use admin client to bypass RLS
-    const { data, error } = await supabaseAdmin
-      .from('addresses')
-      .select('*')
-      .eq('user_id', userId)
-      .order('is_default', { ascending: false });
-
-    if (error) throw error;
-    res.json(apiResponse(true, { addresses: data || [] }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Get single address by ID
-app.get('/api/v1/addresses/:id', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    const { id } = req.params;
-    // Use admin client to bypass RLS
-    const { data, error } = await supabaseAdmin
-      .from('addresses')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { address: data }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Save address
-app.post('/api/v1/addresses', async (req, res) => {
-  try {
-    // Get user_id from header (sent by frontend after login)
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated - missing user ID'));
-
-    // Map frontend field names to database field names
-    const inputName = req.body.name || req.body.full_name;
-    const inputAddress = req.body.address || req.body.address_line1 || req.body.street_address;
-    const inputApartment = req.body.apartment;
-    const inputCity = req.body.city;
-    const inputState = req.body.state;
-    const inputPincode = req.body.pincode || req.body.postal_code;
-    const inputCountry = req.body.country;
-    const inputDefault = req.body.is_default || req.body.isDefault || false;
-
-    // If setting as default, unset others - use admin client
-    if (inputDefault) {
-      await supabaseAdmin.from('addresses').update({ is_default: false }).eq('user_id', userId);
-    }
-
-    // Use admin client to bypass RLS
-    const { data, error } = await supabaseAdmin
-      .from('addresses')
-      .insert({ 
-        user_id: userId, 
-        full_name: inputName, 
-        phone: req.body.phone, 
-        street_address: inputAddress, 
-        apartment: inputApartment, 
-        city: inputCity, 
-        state: inputState, 
-        postal_code: inputPincode, 
-        country: inputCountry || 'India',
-        is_default: inputDefault
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { address: data }, 'Address saved'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Delete address
-app.delete('/api/v1/addresses/:id', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    // Use admin client to bypass RLS
-    await supabaseAdmin.from('addresses').delete().eq('id', req.params.id).eq('user_id', userId);
-    res.json(apiResponse(true));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Update address
-app.put('/api/v1/addresses/:id', async (req, res) => {
-  try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    const { name, phone, address_line1, apartment, city, state, pincode, country, is_default } = req.body;
-    
-    // If setting as default, unset others
-    if (is_default) {
-      await supabaseAdmin.from('addresses').update({ is_default: false }).eq('user_id', userId);
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from('addresses')
-      .update({
-        full_name: name,
-        phone,
-        street_address: address_line1,
-        apartment,
-        city,
-        state,
-        postal_code: pincode,
-        country: country || 'India',
-        is_default: is_default || false
-      })
-      .eq('id', req.params.id)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { address: data }, 'Address updated'));
-  } catch (error) {
+    console.error('Delete cart error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
@@ -615,86 +547,657 @@ app.put('/api/v1/addresses/:id', async (req, res) => {
 // ORDER ROUTES
 // ============================================================================
 
-// Get user orders
-app.get('/api/v1/orders', async (req, res) => {
+// Create order
+app.post('/api/v1/orders', authenticateToken, async (req, res) => {
   try {
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    // Use admin client to bypass RLS
-    const { data, error } = await supabaseAdmin
-      .from('orders')
-      .select('*, order_items(*)')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json(apiResponse(true, { orders: data || [] }));
+    const { items, totalAmount, shippingAddress, razorpayOrderId, paymentStatus } = req.body;
+    
+    if (!items || items.length === 0 || !totalAmount) {
+      return res.status(400).json(apiResponse(false, null, 'Missing required fields: items and totalAmount'));
+    }
+    
+    // Process items - map product/variant to productId/variantId
+    // Store as strings if not valid ObjectIds (frontend may send numeric IDs)
+    // Also fetch size/color from variant if not provided directly
+    const processedItems = await Promise.all(items.map(async (item) => {
+      // Check if it's a valid ObjectId (24 hex characters)
+      const isValidObjectId = (id) => /^[0-9a-fA-F]{24}$/.test(id);
+      
+      const variantId = isValidObjectId(item.variant || item.variantId) ? item.variant || item.variantId : null;
+      
+      // If size/color not provided, try to fetch from variant
+      let size = item.size;
+      let color = item.color;
+      
+      if ((!size || !color) && variantId) {
+        try {
+          const variant = await ProductVariant.findById(variantId);
+          if (variant) {
+            size = size || variant.size;
+            color = color || variant.color;
+          }
+        } catch (err) {
+          console.error('Error fetching variant:', err);
+        }
+      }
+      
+      return {
+        productId: isValidObjectId(item.product || item.productId) ? item.product || item.productId : null,
+        variantId: variantId,
+        name: item.name,
+        size: size,
+        color: color,
+        quantity: item.quantity,
+        price: item.price,
+        image: item.image
+      };
+    }));
+    
+    // Process shipping address - if it's an ID, fetch from database
+    let finalShippingAddress = shippingAddress;
+    if (typeof shippingAddress === 'string' && shippingAddress.length === 24) {
+      // It's an address ID - fetch the address
+      try {
+        const address = await Address.findOne({ _id: shippingAddress, userId: req.userId });
+        if (address) {
+          finalShippingAddress = {
+            fullName: address.fullName,
+            phone: address.phone,
+            street: address.street,
+            city: address.city,
+            state: address.state,
+            postalCode: address.postalCode,
+            country: address.country
+          };
+        }
+      } catch (addrErr) {
+        console.error('Error fetching address:', addrErr);
+      }
+    }
+    
+    const order = new Order({
+      userId: req.userId,
+      items: processedItems,
+      totalAmount,
+      shippingAddress: finalShippingAddress,
+      razorpayOrderId: razorpayOrderId || '',
+      paymentStatus: paymentStatus || 'pending',
+      orderStatus: 'processing'
+    });
+    
+    await order.save();
+    
+    // Clear cart after order
+    await CartItem.deleteMany({ userId: req.userId });
+    
+    res.status(201).json(apiResponse(true, { order }, 'Order created successfully'));
   } catch (error) {
+    console.error('Create order error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Create order
-app.post('/api/v1/orders', async (req, res) => {
+// Get user orders
+app.get('/api/v1/orders', authenticateToken, async (req, res) => {
   try {
-    // Get user_id from header
-    const userId = req.headers['x-user-id'];
-    if (!userId) return res.status(401).json(apiResponse(false, null, 'Not authenticated'));
-
-    const { address_id, payment_method, items } = req.body;
-
-    // Calculate totals
-    const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const shipping = payment_method === 'cod' ? 50 : (subtotal > 1500 ? 0 : 50);
-    const total = subtotal + shipping;
-
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-
-    // Create order - use admin client to bypass RLS
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from('orders')
-      .insert({
-        user_id: userId,
-        address_id,
-        order_number: orderNumber,
-        subtotal,
-        shipping,
-        total_amount: total,
-        payment_method,
-        payment_status: payment_method === 'prepaid' ? 'paid' : 'pending',
-        status: 'pending',
-        product_names: items.map(i => i.product?.name || i.name).join(', '),
-        product_sizes: items.map(i => i.size).join(', '),
-        product_colors: items.map(i => i.color).join(', '),
-        product_images: items.map(i => i.product?.images?.[0] || i.image),
-        items_count: items.reduce((sum, i) => sum + i.quantity, 0)
-      })
-      .select()
-      .single();
-
-    if (orderError) throw orderError;
-
-    // Create order items
-    const orderItems = items.map(item => ({
-      order_id: order.id,
-      product_id: item.product_id || item.id,
-      product_name: item.product?.name || item.name || item.product_name,
-      quantity: item.quantity,
-      price: item.price,
-      size: item.size,
-      color: item.color,
-      image: item.product?.images?.[0] || item.image
+    const orders = await Order.find({ userId: req.userId }).sort({ createdAt: -1 });
+    
+    // Process items to add size/color from variant or product if missing
+    const ordersWithVariantDetails = await Promise.all(orders.map(async (order) => {
+      const processedItems = await Promise.all(order.items.map(async (item) => {
+        let size = item.size;
+        let color = item.color;
+        
+        // If size/color not in item, try to fetch from variant
+        if ((!size || !color) && item.variantId) {
+          try {
+            const variant = await ProductVariant.findById(item.variantId);
+            if (variant) {
+              size = size || variant.size;
+              color = color || variant.color;
+            }
+          } catch (err) {
+            console.error('Error fetching variant:', err);
+          }
+        }
+        
+        // If still no size/color, try to fetch from product (sizes/colors are arrays)
+        if ((!size || !color) && item.productId) {
+          try {
+            const product = await Product.findById(item.productId);
+            if (product) {
+              // Use first available size/color from product's arrays
+              size = size || (product.sizes && product.sizes.length > 0 ? product.sizes[0] : null);
+              color = color || (product.colors && product.colors.length > 0 ? product.colors[0] : null);
+            }
+          } catch (err) {
+            console.error('Error fetching product:', err);
+          }
+        }
+        
+        return {
+          ...item.toObject(),
+          size,
+          color
+        };
+      }));
+      
+      return {
+        ...order.toObject(),
+        items: processedItems
+      };
     }));
-
-    await supabaseAdmin.from('order_items').insert(orderItems);
-
-    // Clear cart
-    await supabaseAdmin.from('cart_items').delete().eq('user_id', userId);
-
-    res.json(apiResponse(true, { order }, 'Order placed successfully'));
+    
+    res.json(apiResponse(true, { orders: ordersWithVariantDetails }));
   } catch (error) {
+    console.error('Get orders error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Get single order
+app.get('/api/v1/orders/:id', authenticateToken, async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, userId: req.userId });
+    if (!order) {
+      return res.status(404).json(apiResponse(false, null, 'Order not found'));
+    }
+    
+    // Process items to add size/color from variant or product if missing
+    const processedItems = await Promise.all(order.items.map(async (item) => {
+      let size = item.size;
+      let color = item.color;
+      
+      // If size/color not in item, try to fetch from variant
+      if ((!size || !color) && item.variantId) {
+        try {
+          const variant = await ProductVariant.findById(item.variantId);
+          if (variant) {
+            size = size || variant.size;
+            color = color || variant.color;
+          }
+        } catch (err) {
+          console.error('Error fetching variant:', err);
+        }
+      }
+      
+      // If still no size/color, try to fetch from product (sizes/colors are arrays)
+      if ((!size || !color) && item.productId) {
+        try {
+          const product = await Product.findById(item.productId);
+          if (product) {
+            // Use first available size/color from product's arrays
+            size = size || (product.sizes && product.sizes.length > 0 ? product.sizes[0] : null);
+            color = color || (product.colors && product.colors.length > 0 ? product.colors[0] : null);
+          }
+        } catch (err) {
+          console.error('Error fetching product:', err);
+        }
+      }
+      
+      return {
+        ...item.toObject(),
+        size,
+        color
+      };
+    }));
+    
+    const processedOrder = {
+      ...order.toObject(),
+      items: processedItems
+    };
+    
+    res.json(apiResponse(true, { order: processedOrder }));
+  } catch (error) {
+    console.error('Get order error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// ============================================================================
+// ADDRESS ROUTES
+// ============================================================================
+
+// Get user addresses
+app.get('/api/v1/addresses', authenticateToken, async (req, res) => {
+  try {
+    const addresses = await Address.find({ userId: req.userId });
+    res.json(apiResponse(true, { addresses }));
+  } catch (error) {
+    console.error('Get addresses error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Add address
+app.post('/api/v1/addresses', authenticateToken, async (req, res) => {
+  try {
+    console.log('Address request received, userId:', req.userId);
+    console.log('Address body:', JSON.stringify(req.body));
+    
+    // Accept both frontend and backend field names
+    const { fullName, name, phone, street, address, address_line1, city, state, postalCode, pincode, country, isDefault, is_default } = req.body;
+    
+    // Map frontend fields to backend fields
+    const finalFullName = fullName || name;
+    const finalStreet = street || address || address_line1;
+    const finalPostalCode = postalCode || pincode;
+    const finalIsDefault = isDefault || is_default;
+    
+    console.log('Mapped fields:', { finalFullName, phone, finalStreet, city, state, finalPostalCode });
+    
+    if (!finalFullName || !phone || !finalStreet || !city || !state || !finalPostalCode) {
+      return res.status(400).json(apiResponse(false, null, 'Missing required fields: name, phone, address, city, state, pincode'));
+    }
+    
+    if (!req.userId) {
+      return res.status(401).json(apiResponse(false, null, 'User not authenticated'));
+    }
+    
+    // If this is default, unset other defaults
+    if (finalIsDefault) {
+      await Address.updateMany({ userId: req.userId }, { isDefault: false });
+    }
+    
+    const addressDoc = new Address({
+      userId: req.userId,
+      fullName: finalFullName,
+      phone,
+      street: finalStreet,
+      city,
+      state,
+      postalCode: finalPostalCode,
+      country: country || 'India',
+      isDefault: finalIsDefault || false
+    });
+    
+    await addressDoc.save();
+    
+    res.status(201).json(apiResponse(true, { address: addressDoc }, 'Address added successfully'));
+  } catch (error) {
+    console.error('Add address error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Update address
+app.put('/api/v1/addresses/:id', authenticateToken, async (req, res) => {
+  try {
+    // Accept both frontend and backend field names
+    const { fullName, name, phone, street, address, address_line1, city, state, postalCode, pincode, country, isDefault, is_default } = req.body;
+    
+    // Map frontend fields to backend fields
+    const finalFullName = fullName || name;
+    const finalStreet = street || address || address_line1;
+    const finalPostalCode = postalCode || pincode;
+    const finalIsDefault = isDefault || is_default;
+    
+    const addressDoc = await Address.findOne({ _id: req.params.id, userId: req.userId });
+    if (!addressDoc) {
+      return res.status(404).json(apiResponse(false, null, 'Address not found'));
+    }
+    
+    // If this is default, unset other defaults
+    if (finalIsDefault) {
+      await Address.updateMany({ userId: req.userId, _id: { $ne: req.params.id } }, { isDefault: false });
+    }
+    
+    if (finalFullName) addressDoc.fullName = finalFullName;
+    if (phone) addressDoc.phone = phone;
+    if (finalStreet) addressDoc.street = finalStreet;
+    if (city) addressDoc.city = city;
+    if (state) addressDoc.state = state;
+    if (finalPostalCode) addressDoc.postalCode = finalPostalCode;
+    if (country) addressDoc.country = country;
+    if (finalIsDefault !== undefined) addressDoc.isDefault = finalIsDefault;
+    
+    await addressDoc.save();
+    
+    res.json(apiResponse(true, { address: addressDoc }, 'Address updated successfully'));
+  } catch (error) {
+    console.error('Update address error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Set address as default
+app.put('/api/v1/addresses/:id/default', authenticateToken, async (req, res) => {
+  try {
+    // Unset all other defaults
+    await Address.updateMany({ userId: req.userId }, { isDefault: false });
+    
+    // Set this address as default
+    const address = await Address.findOneAndUpdate(
+      { _id: req.params.id, userId: req.userId },
+      { isDefault: true },
+      { new: true }
+    );
+    
+    if (!address) {
+      return res.status(404).json(apiResponse(false, null, 'Address not found'));
+    }
+    
+    res.json(apiResponse(true, { address }, 'Default address updated successfully'));
+  } catch (error) {
+    console.error('Set default address error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Delete address
+app.delete('/api/v1/addresses/:id', authenticateToken, async (req, res) => {
+  try {
+    await Address.deleteOne({ _id: req.params.id, userId: req.userId });
+    res.json(apiResponse(true, null, 'Address deleted successfully'));
+  } catch (error) {
+    console.error('Delete address error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// ============================================================================
+// WISHLIST ROUTES
+// ============================================================================
+
+// Get wishlist
+app.get('/api/v1/wishlist', authenticateToken, async (req, res) => {
+  try {
+    const wishlistItems = await Wishlist.find({ userId: req.userId });
+    
+    // Get product details
+    const itemsWithProducts = await Promise.all(
+      wishlistItems.map(async (item) => {
+        const product = await Product.findById(item.productId);
+        return {
+          id: item._id,
+          productId: item.productId,
+          product: product ? {
+            id: product._id,
+            name: product.name,
+            description: product.description,
+            category: product.category,
+            price: product.basePrice,
+            images: product.images
+          } : null
+        };
+      })
+    );
+    
+    res.json(apiResponse(true, { items: itemsWithProducts }));
+  } catch (error) {
+    console.error('Get wishlist error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Add to wishlist
+app.post('/api/v1/wishlist', authenticateToken, async (req, res) => {
+  try {
+    const { productId } = req.body;
+    
+    if (!productId) {
+      return res.status(400).json(apiResponse(false, null, 'Product ID is required'));
+    }
+    
+    // Check if already in wishlist
+    const existing = await Wishlist.findOne({ userId: req.userId, productId });
+    if (existing) {
+      return res.status(400).json(apiResponse(false, null, 'Product already in wishlist'));
+    }
+    
+    const wishlistItem = new Wishlist({
+      userId: req.userId,
+      productId
+    });
+    
+    await wishlistItem.save();
+    
+    res.status(201).json(apiResponse(true, { item: wishlistItem }, 'Added to wishlist'));
+  } catch (error) {
+    console.error('Add to wishlist error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Remove from wishlist
+app.delete('/api/v1/wishlist/:productId', authenticateToken, async (req, res) => {
+  try {
+    await Wishlist.deleteOne({ userId: req.userId, productId: req.params.productId });
+    res.json(apiResponse(true, null, 'Removed from wishlist'));
+  } catch (error) {
+    console.error('Remove from wishlist error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// ============================================================================
+// RETURNS ROUTES
+// ============================================================================
+
+// Get user's returns
+app.get('/api/v1/returns', authenticateToken, async (req, res) => {
+  try {
+    const returns = await Return.find({ userId: req.userId })
+      .populate('orderId')
+      .sort({ createdAt: -1 });
+    res.json(apiResponse(true, { returns }));
+  } catch (error) {
+    console.error('Get returns error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Create return request
+app.post('/api/v1/returns', authenticateToken, async (req, res) => {
+  try {
+    // Accept both field names (frontend uses order_id, backend uses orderId)
+    const { orderId, order_id, items, totalAmount, reason, description } = req.body;
+    const finalOrderId = orderId || order_id;
+    
+    if (!finalOrderId || !reason) {
+      return res.status(400).json(apiResponse(false, null, 'Missing required fields: orderId and reason are required'));
+    }
+    
+    // If items not provided, try to get from order
+    let returnItems = items;
+    let returnTotal = totalAmount;
+    
+    if (!returnItems || returnItems.length === 0) {
+      // Try to fetch items from the order
+      try {
+        const order = await Order.findById(finalOrderId);
+        if (order) {
+          returnItems = order.items || [];
+          returnTotal = totalAmount || order.totalAmount;
+        }
+      } catch (err) {
+        console.log('Could not fetch order items:', err);
+      }
+    }
+    
+    const returnRequest = new Return({
+      userId: req.userId,
+      orderId: finalOrderId,
+      items: returnItems || [],
+      totalAmount: returnTotal || 0,
+      reason,
+      description: description || ''
+    });
+    
+    await returnRequest.save();
+    
+    res.status(201).json(apiResponse(true, { return: returnRequest }, 'Return request submitted'));
+  } catch (error) {
+    console.error('Create return error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Get all returns (admin)
+app.get('/api/v1/admin/returns', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const returns = await Return.find()
+      .populate('userId', 'name email phone')
+      .populate({
+        path: 'orderId',
+        populate: {
+          path: 'items'
+        }
+      })
+      .sort({ createdAt: -1 });
+    
+    // Transform returns to match frontend expectations
+    // Also fetch variant/product details to get size/color
+    const transformedReturns = await Promise.all(returns.map(async (ret) => {
+      // Try to get items from return, or from order if not available
+      let orderItems = ret.items || [];
+      let orderData = ret.orderId;
+      
+      // If no items in return, try to get from order
+      if ((!orderItems || orderItems.length === 0) && ret.orderId) {
+        try {
+          const order = ret.orderId;
+          if (order && order.items) {
+            orderItems = order.items;
+          }
+        } catch (e) {
+          console.log('Could not get order items:', e);
+        }
+      }
+      
+      // Process items to get size/color from variant or product
+      const processedItems = await Promise.all(orderItems.map(async (item) => {
+        let size = item.size;
+        let color = item.color;
+        
+        // If size/color not in item, try to fetch from variant
+        if ((!size || !color) && item.variantId) {
+          try {
+            const variant = await ProductVariant.findById(item.variantId);
+            if (variant) {
+              size = size || variant.size;
+              color = color || variant.color;
+            }
+          } catch (err) {
+            console.error('Error fetching variant:', err);
+          }
+        }
+        
+        // If still no size/color, try to fetch from product
+        if ((!size || !color) && item.productId) {
+          try {
+            const product = await Product.findById(item.productId);
+            if (product) {
+              size = size || (product.sizes && product.sizes.length > 0 ? product.sizes[0] : null);
+              color = color || (product.colors && product.colors.length > 0 ? product.colors[0] : null);
+            }
+          } catch (err) {
+            console.error('Error fetching product:', err);
+          }
+        }
+        
+        return {
+          ...item.toObject ? item.toObject() : item,
+          size,
+          color,
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        };
+      }));
+      
+      // Get first item details for the return
+      const firstItem = processedItems.length > 0 ? processedItems[0] : {};
+      
+      return {
+        _id: ret._id,
+        id: ret._id, // For frontend compatibility
+        user: ret.userId ? {
+          full_name: ret.userId.name || 'Unknown',
+          email: ret.userId.email || 'N/A',
+          phone: ret.userId.phone || 'N/A'
+        } : { full_name: 'Unknown', email: 'N/A', phone: 'N/A' },
+        order: orderData ? {
+          _id: orderData._id || orderData,
+          order_number: (orderData._id || orderData) ? String(orderData._id || orderData).slice(-8) : 'N/A',
+          total_amount: orderData.totalAmount || 0,
+          created_at: orderData.createdAt
+        } : null,
+        order_item: processedItems && processedItems.length > 0 ? {
+          product_name: firstItem.name || firstItem.product_name || 'Product',
+          size: firstItem.size || firstItem.product_size || '',
+          color: firstItem.color || firstItem.product_color || '',
+          quantity: firstItem.quantity || 1,
+          price: firstItem.price || 0
+        } : { product_name: 'Product', size: '', color: '', quantity: 1, price: 0 },
+        items: processedItems,
+        totalAmount: ret.totalAmount || 0,
+        reason: ret.reason || 'N/A',
+        description: ret.description || '',
+        status: ret.status || 'pending',
+        refund_amount: ret.totalAmount || 0,
+        admin_notes: ret.adminNotes || '',
+        createdAt: ret.createdAt,
+        updatedAt: ret.updatedAt
+      };
+    }));
+    
+    res.json(apiResponse(true, { returns: transformedReturns }));
+  } catch (error) {
+    console.error('Admin get returns error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Update return status (admin)
+app.put('/api/v1/admin/returns/:id', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Accept both status and returnStatus (for consistency with orders)
+    const { status, returnStatus, admin_notes, refund_amount } = req.body;
+    const newStatus = status || returnStatus;
+    
+    const returnRequest = await Return.findById(req.params.id);
+    if (!returnRequest) {
+      return res.status(404).json(apiResponse(false, null, 'Return not found'));
+    }
+    
+    if (newStatus) returnRequest.status = newStatus;
+    if (admin_notes) returnRequest.adminNotes = admin_notes;
+    if (refund_amount) returnRequest.totalAmount = refund_amount;
+    returnRequest.processedAt = new Date();
+    returnRequest.processedBy = req.userId;
+    
+    await returnRequest.save();
+    
+    res.json(apiResponse(true, { return: returnRequest }, 'Return updated successfully'));
+  } catch (error) {
+    console.error('Admin update return error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Update return status (admin) - /status endpoint
+app.put('/api/v1/admin/returns/:id/status', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    // Accept both status and returnStatus
+    const { status, returnStatus, admin_notes, refund_amount } = req.body;
+    const newStatus = status || returnStatus;
+    
+    const returnRequest = await Return.findById(req.params.id);
+    if (!returnRequest) {
+      return res.status(404).json(apiResponse(false, null, 'Return not found'));
+    }
+    
+    if (newStatus) returnRequest.status = newStatus;
+    if (admin_notes) returnRequest.adminNotes = admin_notes;
+    if (refund_amount) returnRequest.totalAmount = refund_amount;
+    returnRequest.processedAt = new Date();
+    returnRequest.processedBy = req.userId;
+    
+    await returnRequest.save();
+    
+    res.json(apiResponse(true, { return: returnRequest }, 'Return status updated successfully'));
+  } catch (error) {
+    console.error('Admin update return status error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
@@ -703,896 +1206,355 @@ app.post('/api/v1/orders', async (req, res) => {
 // ADMIN ROUTES
 // ============================================================================
 
-// Helper function to check if user is admin
-const checkAdmin = async (req) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return { isAdmin: false, error: 'Not authenticated' };
-  
-  try {
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) return { isAdmin: false, error: 'User not found' };
-    
-    // Use service role client to bypass RLS when checking admin status
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    
-    // If profile doesn't exist or has error, default to not admin
-    if (error || !profile) {
-      return { isAdmin: false, userId: user.id, error: 'Profile not found' };
-    }
-    
-    return { isAdmin: profile?.role === 'admin', userId: user.id, error: null };
-  } catch (error) {
-    return { isAdmin: false, error: error.message };
-  }
-};
-
-// Get dashboard stats (admin)
-app.get('/api/v1/admin/stats', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, adminCheck.error || 'Admin only'));
-    }
-
-    // Get total orders
-    const { count: totalOrders } = await supabaseAdmin
-      .from('orders')
-      .select('*', { count: 'exact', head: true });
-
-    // Get total revenue
-    const { data: orders } = await supabaseAdmin
-      .from('orders')
-      .select('total_amount');
-    const totalRevenue = orders?.reduce((sum, o) => sum + (o.total_amount || 0), 0) || 0;
-
-    // Get total products
-    const { count: totalProducts } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true });
-
-    // Get total users
-    const { count: totalUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    // Get pending orders count
-    const { count: pendingOrders } = await supabase
-      .from('orders')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending');
-
-    res.json(apiResponse(true, {
-      stats: {
-        totalOrders,
-        totalRevenue,
-        totalProducts,
-        totalUsers,
-        pendingOrders
-      }
-    }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
 // Get all users (admin)
-app.get('/api/v1/admin/users', async (req, res) => {
+app.get('/api/v1/admin/users', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    // Get profiles
-    const { data: profiles, error } = await supabaseAdmin
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    // Get all auth users to join with profiles
-    const { data: { users: authUsers } } = await supabaseAdmin.auth.admin.listUsers();
-
-    // Map profiles with auth data
-    const usersWithAuth = (profiles || []).map(profile => {
-      const authUser = authUsers?.find(u => u.id === profile.id);
-      return {
-        ...profile,
-        name: profile.full_name || 'N/A',
-        email: authUser?.email || 'N/A',
-        phone: profile.phone || 'N/A'
-      };
-    });
-
-    // Get order count for each user
-    const usersWithOrders = await Promise.all(usersWithAuth.map(async (profile) => {
-      const { count } = await supabaseAdmin
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', profile.id);
-      return { ...profile, orderCount: count || 0 };
-    }));
-
-    res.json(apiResponse(true, { users: usersWithOrders || [] }));
+    const users = await User.find().select('-password');
+    res.json(apiResponse(true, { users }));
   } catch (error) {
+    console.error('Admin get users error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Get all orders (admin)
-app.get('/api/v1/admin/orders', async (req, res) => {
+app.get('/api/v1/admin/orders', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
+    const { status, page = 1, limit = 10 } = req.query;
+    
+    const query = {};
+    if (status) {
+      query.orderStatus = status;
     }
-
-    // Get orders with user and address info
-    const { data: orders, error } = await supabaseAdmin
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
     
-    // Get order IDs to fetch order_items
-    const orderIds = (orders || []).map(o => o.id).filter(Boolean);
+    const orders = await Order.find(query)
+      .populate('userId', 'name email phone')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
     
-    console.log('Admin orders - Total orders:', orders?.length || 0);
-    console.log('Admin orders - Order IDs:', orderIds);
+    const total = await Order.countDocuments(query);
     
-    // Fetch order_items separately
-    let orderItemsMap = {};
-    if (orderIds.length > 0) {
-      // First check if order_items table exists and has data
-      const { data: allItems, error: itemsError } = await supabaseAdmin
-        .from('order_items')
-        .select('*')
-        .in('order_id', orderIds);
-      
-      console.log('Admin orders - Order items error:', itemsError);
-      console.log('Admin orders - All items fetched:', allItems?.length || 0);
-      
-      // Also try to get ALL order_items to see what's in the table
-      const { data: allOrderItems } = await supabaseAdmin
-        .from('order_items')
-        .select('*')
-        .limit(10);
-      console.log('Admin orders - Sample of ALL order_items in DB:', allOrderItems);
-      
-      // Group items by order_id
-      (allItems || []).forEach(item => {
-        if (!orderItemsMap[item.order_id]) {
-          orderItemsMap[item.order_id] = [];
+    // Transform orders to include shipping address
+    // Also fetch variant details to get size/color if not stored in order items
+    const transformedOrders = await Promise.all(orders.map(async (order) => {
+      // Process items to add size/color from variant or product if missing
+      const processedItems = await Promise.all(order.items.map(async (item) => {
+        let size = item.size;
+        let color = item.color;
+        
+        // If size/color not in item, try to fetch from variant
+        if ((!size || !color) && item.variantId) {
+          try {
+            const variant = await ProductVariant.findById(item.variantId);
+            if (variant) {
+              size = size || variant.size;
+              color = color || variant.color;
+            }
+          } catch (err) {
+            console.error('Error fetching variant:', err);
+          }
         }
-        orderItemsMap[item.order_id].push(item);
-      });
-    }
-    
-    // Get all user IDs and address IDs from orders
-    const userIds = [...new Set((orders || []).map(o => o.user_id).filter(Boolean))];
-    const addressIds = [...new Set((orders || []).map(o => o.address_id).filter(Boolean))];
-    
-    console.log('Admin orders - User IDs:', userIds);
-    console.log('Admin orders - Address IDs:', addressIds);
-    
-    // Fetch users and addresses separately
-    let users = [], addresses = [];
-    
-    if (userIds.length > 0) {
-      const { data: profiles } = await supabaseAdmin
-        .from('profiles')
-        .select('*')
-        .in('id', userIds);
-      users = profiles || [];
-      console.log('Admin orders - Users fetched:', users.length, users);
-    }
-    
-    if (addressIds.length > 0) {
-      const { data: addrData } = await supabaseAdmin
-        .from('addresses')
-        .select('*')
-        .in('id', addressIds);
-      addresses = addrData || [];
-      console.log('Admin orders - Addresses fetched:', addresses.length);
-    }
-    
-    // Transform data to match frontend expectations
-    const transformedOrders = (orders || []).map(order => {
-      const user = users.find(u => u.id === order.user_id);
-      const address = addresses.find(a => a.id === order.address_id);
-      const items = orderItemsMap[order.id] || [];
-      
-      // Debug logging
-      console.log('Order:', order.id, 'Items found:', items.length, 'Items:', JSON.stringify(items));
+        
+        // If still no size/color, try to fetch from product (sizes/colors are arrays)
+        if ((!size || !color) && item.productId) {
+          try {
+            const product = await Product.findById(item.productId);
+            if (product) {
+              // Use first available size/color from product's arrays
+              size = size || (product.sizes && product.sizes.length > 0 ? product.sizes[0] : null);
+              color = color || (product.colors && product.colors.length > 0 ? product.colors[0] : null);
+            }
+          } catch (err) {
+            console.error('Error fetching product:', err);
+          }
+        }
+        
+        return {
+          ...item.toObject(),
+          size,
+          color
+        };
+      }));
       
       return {
-        ...order,
-        items: items,
-        user: user ? {
-          id: user.id,
-          name: user.full_name || 'N/A',
-          email: user.email || 'N/A',
-          phone: user.phone || 'N/A'
-        } : null,
-        address: address ? {
-          name: address.full_name || '',
-          phone: address.phone || '',
-          address_line1: address.street_address || '',
-          apartment: address.apartment || '',
-          city: address.city || '',
-          state: address.state || '',
-          pincode: address.postal_code || '',
-          country: address.country || ''
-        } : null
+        _id: order._id,
+        userId: order.userId,
+        items: processedItems,
+        totalAmount: order.totalAmount,
+        shippingAddress: order.shippingAddress,
+        paymentStatus: order.paymentStatus,
+        orderStatus: order.orderStatus,
+        razorpayOrderId: order.razorpayOrderId,
+        razorpayPaymentId: order.razorpayPaymentId,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt
       };
-    });
+    }));
     
-    res.json(apiResponse(true, { orders: transformedOrders }));
+    res.json(apiResponse(true, { 
+      orders: transformedOrders,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit)
+    }));
   } catch (error) {
+    console.error('Admin get orders error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Update order status (admin)
-app.put('/api/v1/admin/orders/:id/status', async (req, res) => {
+app.put('/api/v1/admin/orders/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { status } = req.body;
-    const { id } = req.params;
+    const { orderStatus, paymentStatus } = req.body;
     
-    // Validate status
-    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json(apiResponse(false, null, 'Invalid status'));
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json(apiResponse(false, null, 'Order not found'));
     }
     
-    const { data, error } = await supabaseAdmin
-      .from('orders')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { order: data }));
+    if (orderStatus) order.orderStatus = orderStatus;
+    if (paymentStatus) order.paymentStatus = paymentStatus;
+    
+    await order.save();
+    
+    res.json(apiResponse(true, { order }, 'Order updated successfully'));
   } catch (error) {
+    console.error('Admin update order error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Update payment status (admin)
-app.put('/api/v1/admin/orders/:id/payment', async (req, res) => {
+// Update order status (admin) - specific endpoint for /status
+app.put('/api/v1/admin/orders/:id/status', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { payment_status } = req.body;
-    const { id } = req.params;
+    const { orderStatus, paymentStatus } = req.body;
     
-    const { data, error } = await supabaseAdmin
-      .from('orders')
-      .update({ payment_status, updated_at: new Date().toISOString() })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { order: data }));
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json(apiResponse(false, null, 'Order not found'));
+    }
+    
+    if (orderStatus) order.orderStatus = orderStatus;
+    if (paymentStatus) order.paymentStatus = paymentStatus;
+    
+    await order.save();
+    
+    res.json(apiResponse(true, { order }, 'Order status updated successfully'));
   } catch (error) {
+    console.error('Admin update order status error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Get admin stats
+app.get('/api/v1/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const totalProducts = await Product.countDocuments();
+    const totalOrders = await Order.countDocuments();
+    const totalUsers = await User.countDocuments();
+    
+    // Calculate total revenue from paid orders
+    const revenueResult = await Order.aggregate([
+      { $match: { paymentStatus: 'paid' } },
+      { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+    ]);
+    const totalRevenue = revenueResult[0]?.total || 0;
+    
+    // Get recent orders
+    const recentOrders = await Order.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate('userId', 'name email');
+    
+    // Transform recent orders
+    const transformedRecentOrders = recentOrders.map(order => ({
+      id: order._id,
+      order_number: order._id.toString().slice(0, 8),
+      total_amount: order.totalAmount,
+      status: order.orderStatus,
+      created_at: order.createdAt,
+      user: order.userId ? {
+        name: order.userId.name,
+        email: order.userId.email
+      } : null
+    }));
+    
+    res.json(apiResponse(true, {
+      stats: {
+        totalProducts,
+        totalOrders,
+        totalUsers,
+        totalRevenue,
+        recentOrders: transformedRecentOrders
+      }
+    }));
+  } catch (error) {
+    console.error('Admin stats error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Get all products (admin)
-app.get('/api/v1/admin/products', async (req, res) => {
+app.get('/api/v1/admin/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from('products')
-      .select('*, product_variants(*)')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
+    const products = await Product.find().sort({ createdAt: -1 });
     
-    // Transform data to include computed price and stock from variants
-    const products = (data || []).map(product => {
-      const variants = product.product_variants || [];
-      const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-      return {
-        ...product,
-        price: product.base_price || 0,
-        stock: totalStock || product.stock || 0,
-        variants
-      };
-    });
+    const productsWithVariants = await Promise.all(
+      products.map(async (product) => {
+        const variants = await ProductVariant.find({ productId: product._id });
+        return {
+          id: product._id,
+          name: product.name,
+          description: product.description,
+          category: product.category,
+          subcategory: product.subcategory || '',
+          basePrice: product.basePrice,
+          discount: product.discount || 0,
+          stock: product.stock || 0,
+          sizes: product.sizes || [],
+          colors: product.colors || [],
+          status: product.status || 'active',
+          images: product.images || [],
+          createdAt: product.createdAt,
+          variants: variants.map(v => ({
+            id: v._id,
+            size: v.size,
+            color: v.color,
+            price: v.price,
+            stock: v.stock
+          }))
+        };
+      })
+    );
     
-    res.json(apiResponse(true, { products }));
+    res.json(apiResponse(true, { products: productsWithVariants }));
   } catch (error) {
+    console.error('Admin get products error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Create product (admin)
-app.post('/api/v1/admin/products', async (req, res) => {
+app.post('/api/v1/admin/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { name, description, category, base_price, brand, images, is_active, is_featured, is_new, discount, stock, sizes, colors } = req.body;
-
-    const { data, error } = await supabaseAdmin
-      .from('products')
-      .insert({
-        name,
-        description,
-        category,
-        base_price,
-        brand,
-        images: images || [],
-        is_active: is_active !== false,
-        is_featured: is_featured || false,
-        is_new: is_new || false,
-        discount: discount || 0,
-        stock: stock || 0
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
+    const { name, description, category, subcategory, base_price, discount, stock, sizes, colors, images, status } = req.body;
     
-    // Create variants if sizes and colors are provided
-    if (data && sizes && colors && sizes.length > 0 && colors.length > 0) {
-      const variants = [];
-      for (const size of sizes) {
-        for (const color of colors) {
-          variants.push({
-            product_id: data.id,
-            size,
-            color,
-            price: base_price,
-            stock: stock || 10
-          });
-        }
-      }
-      
-      if (variants.length > 0) {
-        await supabase.from('product_variants').insert(variants);
-      }
+    if (!name || !base_price) {
+      return res.status(400).json(apiResponse(false, null, 'Name and price are required'));
     }
     
-    res.json(apiResponse(true, { product: data }, 'Product created'));
+    const product = new Product({
+      name,
+      description: description || '',
+      category: category || 'unisex',
+      subcategory: subcategory || '',
+      basePrice: base_price,
+      discount: discount || 0,
+      stock: stock || 0,
+      sizes: sizes || [],
+      colors: colors || [],
+      images: images || [],
+      status: status || 'active'
+    });
+    
+    await product.save();
+    
+    res.status(201).json(apiResponse(true, { product: { id: product._id, ...product.toObject() } }, 'Product created successfully'));
   } catch (error) {
+    console.error('Admin create product error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Update product (admin)
-app.put('/api/v1/admin/products/:id', async (req, res) => {
+app.put('/api/v1/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { id } = req.params;
-    const { name, description, category, base_price, brand, images, is_active, is_featured, is_new, discount, stock, sizes, colors } = req.body;
-
-    const { data, error } = await supabaseAdmin
-      .from('products')
-      .update({
-        name,
-        description,
-        category,
-        base_price,
-        brand,
-        images,
-        is_active,
-        is_featured,
-        is_new,
-        discount: discount || 0,
-        stock: stock || 0,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
+    const { name, description, category, subcategory, base_price, discount, stock, sizes, colors, images, status } = req.body;
     
-    // If sizes and colors are provided, update variants
-    if (sizes && colors && sizes.length > 0 && colors.length > 0) {
-      // Delete existing variants
-      await supabaseAdmin.from('product_variants').delete().eq('product_id', id);
-      
-      // Create new variants
-      const variants = [];
-      for (const size of sizes) {
-        for (const color of colors) {
-          variants.push({
-            product_id: id,
-            size,
-            color,
-            price: base_price,
-            stock: stock || 10
-          });
-        }
-      }
-      
-      if (variants.length > 0) {
-        await supabaseAdmin.from('product_variants').insert(variants);
-      }
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json(apiResponse(false, null, 'Product not found'));
     }
     
-    res.json(apiResponse(true, { product: data }, 'Product updated'));
+    if (name) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (category) product.category = category;
+    if (subcategory !== undefined) product.subcategory = subcategory;
+    if (base_price) product.basePrice = base_price;
+    if (discount !== undefined) product.discount = discount;
+    if (stock !== undefined) product.stock = stock;
+    if (sizes) product.sizes = sizes;
+    if (colors) product.colors = colors;
+    if (images) product.images = images;
+    if (status) product.status = status;
+    
+    await product.save();
+    
+    res.json(apiResponse(true, { product: { id: product._id, ...product.toObject() } }, 'Product updated successfully'));
   } catch (error) {
+    console.error('Admin update product error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // Delete product (admin)
-app.delete('/api/v1/admin/products/:id', async (req, res) => {
+app.put('/api/v1/admin/variants/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { id } = req.params;
+    const { stock, price } = req.body;
     
-    // First delete variants
-    await supabaseAdmin.from('product_variants').delete().eq('product_id', id);
+    const variant = await ProductVariant.findById(req.params.id);
+    if (!variant) {
+      return res.status(404).json(apiResponse(false, null, 'Variant not found'));
+    }
     
-    // Then delete product
-    const { error } = await supabaseAdmin.from('products').delete().eq('id', id);
-
-    if (error) throw error;
-    res.json(apiResponse(true, null, 'Product deleted'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Get inventory (admin)
-app.get('/api/v1/admin/inventory', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { data, error } = await supabase
-      .from('product_variants')
-      .select('*, product:products(name, category, images)')
-      .order('product_id', { ascending: false });
-
-    if (error) throw error;
-    res.json(apiResponse(true, { inventory: data || [] }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Update inventory (admin)
-app.put('/api/v1/admin/inventory/:id', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { id } = req.params;
-    const { stock, price, size, color, image } = req.body;
-
-    const { data, error } = await supabase
-      .from('product_variants')
-      .update({
-        stock: stock !== undefined ? stock : undefined,
-        price: price !== undefined ? price : undefined,
-        size: size !== undefined ? size : undefined,
-        color: color !== undefined ? color : undefined,
-        image: image !== undefined ? image : undefined,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { variant: data }, 'Inventory updated'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Create product variant (admin)
-app.post('/api/v1/admin/products/:id/variants', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { id: productId } = req.params;
-    const { size, color, stock, price, image } = req.body;
-
-    const { data, error } = await supabase
-      .from('product_variants')
-      .insert({
-        product_id: productId,
-        size,
-        color,
-        stock: stock || 0,
-        price: price || 0,
-        image,
-        is_active: true
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { variant: data }, 'Variant created'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Delete product variant (admin)
-app.delete('/api/v1/admin/variants/:id', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { id } = req.params;
-    const { error } = await supabaseAdmin.from('product_variants').delete().eq('id', id);
-
-    if (error) throw error;
-    res.json(apiResponse(true, null, 'Variant deleted'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Upload product image (admin)
-app.post('/api/v1/admin/upload', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-
-    const { imageData, fileName } = req.body;
+    if (stock !== undefined) variant.stock = stock;
+    if (price !== undefined) variant.price = price;
     
-    if (!imageData || !fileName) {
-      return res.status(400).json(apiResponse(false, null, 'Image data and file name required'));
-    }
-
-    // Convert base64 to buffer
-    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
+    await variant.save();
     
-    // Upload to Supabase Storage
-    const filePath = `products/${Date.now()}-${fileName}`;
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, buffer, {
-        contentType: 'image/jpeg',
-        upsert: true
-      });
-
-    if (error) throw error;
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath);
-
-    res.json(apiResponse(true, { url: publicUrl }, 'Image uploaded'));
+    res.json(apiResponse(true, { variant }, 'Variant updated successfully'));
   } catch (error) {
+    console.error('Admin update variant error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
-// Make user admin (admin only)
-app.put('/api/v1/admin/users/:id/role', async (req, res) => {
+// Delete product (admin)
+app.delete('/api/v1/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) {
+      return res.status(404).json(apiResponse(false, null, 'Product not found'));
     }
-
-    const { id } = req.params;
-    const { role } = req.body;
     
-    if (!['user', 'admin'].includes(role)) {
-      return res.status(400).json(apiResponse(false, null, 'Invalid role'));
-    }
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ role })
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json(apiResponse(true, { user: data }, 'User role updated'));
+    // Delete associated variants
+    await ProductVariant.deleteMany({ productId: req.params.id });
+    
+    res.json(apiResponse(true, null, 'Product deleted successfully'));
   } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Check if current user is admin
-app.get('/api/v1/admin/check', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    res.json(apiResponse(true, { isAdmin: adminCheck.isAdmin }));
-  } catch (error) {
+    console.error('Admin delete product error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 
 // ============================================================================
-// RETURNS API
+// CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 
-// Get user's returns
-app.get('/api/v1/returns', async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json(apiResponse(false, null, 'Unauthorized'));
-    }
-    
-    const { data: returns, error } = await supabaseAdmin
-      .from('returns')
-      .select(`
-        *,
-        order:orders!order_id(
-          order_number,
-          total_amount,
-          status,
-          created_at
-        ),
-        order_item:order_items!order_item_id(
-          product_name,
-          size,
-          color,
-          quantity,
-          price
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    
-    res.json(apiResponse(true, { returns }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kleoniverse';
 
-// Create return request
-app.post('/api/v1/returns', async (req, res) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json(apiResponse(false, null, 'Unauthorized'));
-    }
-    
-    const { order_id, order_item_id, reason, description } = req.body;
-    
-    if (!order_id || !reason) {
-      return res.status(400).json(apiResponse(false, null, 'Order ID and reason are required'));
-    }
-    
-    // Verify the order belongs to the user
-    const { data: order, error: orderError } = await supabaseAdmin
-      .from('orders')
-      .select('id, user_id, total_amount')
-      .eq('id', order_id)
-      .eq('user_id', userId)
-      .single();
-    
-    if (orderError || !order) {
-      return res.status(404).json(apiResponse(false, null, 'Order not found'));
-    }
-    
-    // Check if a return already exists for this order/item
-    let returnQuery = supabaseAdmin
-      .from('returns')
-      .select('id')
-      .eq('order_id', order_id);
-    
-    if (order_item_id) {
-      returnQuery = returnQuery.eq('order_item_id', order_item_id);
-    }
-    
-    const { data: existingReturn } = await returnQuery.single();
-    
-    if (existingReturn) {
-      return res.status(400).json(apiResponse(false, null, 'Return request already exists for this order'));
-    }
-    
-    // Get order item details for refund amount
-    let refundAmount = order.total_amount;
-    if (order_item_id) {
-      const { data: orderItem } = await supabaseAdmin
-        .from('order_items')
-        .select('price, quantity')
-        .eq('id', order_item_id)
-        .single();
-      
-      if (orderItem) {
-        refundAmount = orderItem.price * orderItem.quantity;
-      }
-    }
-    
-    // Create return request
-    const { data: returnRecord, error } = await supabaseAdmin
-      .from('returns')
-      .insert({
-        order_id,
-        user_id: userId,
-        order_item_id: order_item_id || null,
-        reason,
-        description: description || null,
-        refund_amount: refundAmount,
-        status: 'pending'
-      })
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    res.json(apiResponse(true, { return: returnRecord }, 'Return request submitted successfully'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('Connected to MongoDB');
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
 
-// Admin: Get all returns
-app.get('/api/v1/admin/returns', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-    
-    const { status, limit = 50 } = req.query;
-    
-    let query = supabaseAdmin
-      .from('returns')
-      .select(`
-        *,
-        order:orders!order_id(
-          order_number,
-          total_amount,
-          status,
-          created_at
-        ),
-        order_item:order_items!order_item_id(
-          product_name,
-          size,
-          color,
-          quantity,
-          price,
-          image
-        ),
-        user:profiles!returns_user_id_fkey(
-          id,
-          full_name,
-          email,
-          phone
-        )
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (status) {
-      query = query.eq('status', status);
-    }
-    
-    if (limit) {
-      query = query.limit(parseInt(limit));
-    }
-    
-    const { data: returns, error } = await query;
-    
-    if (error) throw error;
-    
-    res.json(apiResponse(true, { returns }));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// Admin: Update return status
-app.put('/api/v1/admin/returns/:id/status', async (req, res) => {
-  try {
-    const adminCheck = await checkAdmin(req);
-    if (!adminCheck.isAdmin) {
-      return res.status(403).json(apiResponse(false, null, 'Admin only'));
-    }
-    
-    const { id } = req.params;
-    const { status, refund_amount, admin_notes } = req.body;
-    
-    if (!status) {
-      return res.status(400).json(apiResponse(false, null, 'Status is required'));
-    }
-    
-    const validStatuses = ['pending', 'approved', 'rejected', 'completed', 'refunded'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json(apiResponse(false, null, 'Invalid status'));
-    }
-    
-    const updateData = {
-      status,
-      admin_notes: admin_notes || null
-    };
-    
-    if (refund_amount !== undefined) {
-      updateData.refund_amount = refund_amount;
-    }
-    
-    const { data: returnRecord, error } = await supabaseAdmin
-      .from('returns')
-      .update(updateData)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    
-    // If refund is processed, update order status
-    if (status === 'refunded') {
-      // Get the order_id from return record
-      const { data: returnData } = await supabaseAdmin
-        .from('returns')
-        .select('order_id')
-        .eq('id', id)
-        .single();
-      
-      if (returnData) {
-        // Update order status to reflect refund
-        await supabaseAdmin
-          .from('orders')
-          .update({ status: 'refunded' })
-          .eq('id', returnData.order_id);
-      }
-    }
-    
-    res.json(apiResponse(true, { return: returnRecord }, 'Return status updated'));
-  } catch (error) {
-    res.status(500).json(apiResponse(false, null, error.message));
-  }
-});
-
-// ============================================================================
-// START SERVER
-// ============================================================================
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Supabase: ${supabaseUrl}`);
-});
+module.exports = app;

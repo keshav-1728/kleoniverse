@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { CheckCircle, Package, Truck, Clock } from 'lucide-react';
-import { fetchOrderById } from '@/services/supabaseService';
+import { getOrder } from '@/services/apiService';
 import { Button } from '@/components/ui/button';
 
 export default function OrderConfirmationPage() {
@@ -18,12 +18,12 @@ export default function OrderConfirmationPage() {
         return;
       }
 
-      const { success, order: orderData, error: orderError } = await fetchOrderById(orderId);
+      const { success, order: orderData, message } = await getOrder(orderId);
       
       if (success && orderData) {
         setOrder(orderData);
       } else {
-        setError(orderError || 'Order not found');
+        setError(message || 'Order not found');
       }
       
       setLoading(false);

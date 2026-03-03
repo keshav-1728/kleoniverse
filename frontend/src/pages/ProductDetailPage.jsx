@@ -15,7 +15,8 @@ export default function ProductDetailPage({
   onAddToCart, 
   wishlist, 
   onToggleWishlist,
-  onQuickView 
+  onQuickView,
+  onOpenCart
 }) {
   const { productId } = useParams();
   const navigate = useNavigate();
@@ -112,6 +113,10 @@ export default function ProductDetailPage({
       image: productImages[0]
     });
     toast.success('Added to cart!');
+    // Open cart drawer after adding
+    if (onOpenCart) {
+      onOpenCart();
+    }
   };
 
   const checkDelivery = () => {

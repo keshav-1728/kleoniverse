@@ -6,6 +6,7 @@ import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
 import { QuickViewModal } from '@/components/QuickViewModal';
 import AdminRoute from '@/components/AdminRoute';
+import AdminLayout from '@/components/AdminLayout';
 import HomePage from '@/pages/HomePage';
 import OurStoryPage from '@/pages/OurStoryPage';
 import HelpCenterPage from '@/pages/HelpCenterPage';
@@ -26,15 +27,12 @@ import AdminOrdersPage from '@/pages/admin/AdminOrdersPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
 import AdminProductsPage from '@/pages/admin/AdminProductsPage';
 import AdminReturnsPage from '@/pages/admin/AdminReturnsPage';
-import { supabase } from '@/lib/supabase';
-import { getCart, addToCart as supabaseAddToCart, removeFromCart as supabaseRemoveFromCart, updateCartQuantity as supabaseUpdateCartQuantity, getWishlist, addToWishlist as supabaseAddToWishlist, removeFromWishlist as supabaseRemoveFromWishlist } from '@/services/supabaseService';
+import { getCart, addToCart as apiAddToCart, removeFromCart as apiRemoveFromCart, updateCartQuantity as apiUpdateCartQuantity, getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist } from '@/services/apiService';
 import '@/App.css';
 
 function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCartDrawerOpen, quickViewProduct, setQuickViewProduct, isAuthenticated, setIsAuthenticated, user, setUser, handleLogout, handleAddToCart, handleUpdateQuantity, handleRemoveItem, handleToggleWishlist }) {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-
-  console.log('App - Rendering with isAuthenticated:', isAuthenticated, 'user:', user?.email);
   
   return (
     <div className="App">
@@ -50,18 +48,20 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
       )}
 
       <Routes>
-        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-        <Route path="/admin/orders" element={<AdminRoute><AdminOrdersPage /></AdminRoute>} />
-        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
-        <Route path="/admin/products" element={<AdminRoute><AdminProductsPage /></AdminRoute>} />
-        <Route path="/admin/returns" element={<AdminRoute><AdminReturnsPage /></AdminRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>} >
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="returns" element={<AdminReturnsPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+        </Route>
         <Route path="/" element={<HomePage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/our-story" element={<OurStoryPage />} />
         <Route path="/products" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/new-arrivals" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} sort="new" />} />
         <Route path="/category/:categoryId" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/sale" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
-        <Route path="/product/:productId" element={<ProductDetailPage onAddToCart={handleAddToCart} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onQuickView={setQuickViewProduct} />} />
+        <Route path="/product/:productId" element={<ProductDetailPage onAddToCart={handleAddToCart} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onQuickView={setQuickViewProduct} onOpenCart={() => setCartDrawerOpen(true)} />} />
         <Route path="/search" element={<SearchResultsPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onQuickView={setQuickViewProduct} />} />
         <Route path="/cart" element={<CartPage cart={cart} onUpdateQuantity={handleUpdateQuantity} onRemoveItem={handleRemoveItem} />} />
@@ -81,9 +81,9 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
       {!isAdminRoute && <Footer />}
 
       <CartDrawer
+        cart={cart}
         open={cartDrawerOpen}
         onClose={() => setCartDrawerOpen(false)}
-        cart={cart}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
       />
@@ -95,6 +95,7 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
         onAddToCart={handleAddToCart}
         wishlist={wishlist}
         onToggleWishlist={handleToggleWishlist}
+        onOpenCart={() => setCartDrawerOpen(true)}
       />
 
       <Toaster position="top-center" richColors />
@@ -103,14 +104,9 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
 }
 
 function App() {
-  // IMMEDIATE debug logging - this runs FIRST before any React rendering
+  // Check auth state from localStorage immediately
   const token = localStorage.getItem('kleoni_token');
   const userData = localStorage.getItem('kleoni_user');
-  
-  console.log('%c=== APP MOUNT DEBUG ===', 'color: blue; font-weight: bold');
-  console.log('1. localStorage token:', token ? 'EXISTS (' + token.substring(0, 20) + '...)' : 'MISSING');
-  console.log('2. localStorage userData:', userData ? 'EXISTS' : 'MISSING');
-  console.log('3. userData preview:', userData ? userData.substring(0, 100) : 'N/A');
   
   let parsedUser = null;
   let parsedIsAuth = false;
@@ -118,15 +114,12 @@ function App() {
   try {
     if (userData) {
       parsedUser = JSON.parse(userData);
-      console.log('4. Parsed user email:', parsedUser?.email);
     }
   } catch (e) {
-    console.error('5. JSON parse error:', e);
+    console.error('Error parsing user data:', e);
   }
   
   parsedIsAuth = !!(token && userData);
-  console.log('6. Calculated isAuthenticated:', parsedIsAuth);
-  console.log('=========================');
   
   const [cart, setCart] = useState(() => {
     try {
@@ -148,168 +141,77 @@ function App() {
   const [user, setUser] = useState(parsedUser);
   const [loading, setLoading] = useState(false);
 
-  // Initialize auth and load data
+  // Load cart and wishlist from API if authenticated
   useEffect(() => {
-    let isMounted = true;
-    
-    const initializeAuth = async () => {
-      // Add timeout to prevent infinite loading
-      const timeoutId = setTimeout(() => {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }, 10000); // 10 second timeout
-      
-      try {
-        // Check for backend JWT token first
-        const token = localStorage.getItem('kleoni_token');
-        const userData = localStorage.getItem('kleoni_user');
-        
-        if (token && userData) {
-          const user = JSON.parse(userData);
-          setIsAuthenticated(true);
-          setUser(user);
-          
-          // Load cart from localStorage for now
-          const localCart = JSON.parse(localStorage.getItem('kleoniverse_cart') || '[]');
-          setCart(localCart);
-          
-          const localWishlist = JSON.parse(localStorage.getItem('kleoniverse_wishlist') || '[]');
-          setWishlist(localWishlist);
-        } else {
-          // Check Supabase session as fallback
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (!isMounted) return;
-          
-          if (session?.user) {
-            setIsAuthenticated(true);
-            setUser(session.user);
-            
-            // Load cart from Supabase
-            const { cart: supabaseCart } = await getCart();
-            setCart(supabaseCart.map(item => ({
-              id: item.id,
-              product_id: item.product_id,
+    const loadData = async () => {
+      if (isAuthenticated && token) {
+        try {
+          const { cart: apiCart } = await getCart();
+          if (apiCart && Array.isArray(apiCart)) {
+            setCart(apiCart.map(item => ({
+              id: item.variantId,
+              product_id: item.productId,
               name: item.product?.name || item.name,
               price: item.price,
               image: item.product?.images?.[0] || item.image,
-              size: item.size,
-              color: item.color,
+              size: item.variant?.size || item.size,
+              color: item.variant?.color || item.color,
               quantity: item.quantity,
               product: item.product
             })));
-            
-            // Load wishlist from Supabase
-            const { wishlist: supabaseWishlist } = await getWishlist();
-            setWishlist(supabaseWishlist.map(item => item.product_id || item.product?.id));
-          } else {
-            // Load from localStorage for guest users
-            const localCart = JSON.parse(localStorage.getItem('kleoniverse_cart') || '[]');
-            setCart(localCart);
-            
-            const localWishlist = JSON.parse(localStorage.getItem('kleoniverse_wishlist') || '[]');
-            setWishlist(localWishlist);
           }
-        }
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-        // Load from localStorage on error
-        const localCart = JSON.parse(localStorage.getItem('kleoniverse_cart') || '[]');
-        setCart(localCart);
-        
-        const localWishlist = JSON.parse(localStorage.getItem('kleoniverse_wishlist') || '[]');
-        setWishlist(localWishlist);
-      } finally {
-        if (isMounted) {
-          clearTimeout(timeoutId);
-          setLoading(false);
+          
+          const { wishlist: apiWishlist } = await getWishlist();
+          if (apiWishlist && Array.isArray(apiWishlist)) {
+            setWishlist(apiWishlist.map(item => item.productId || item.product?.id));
+          }
+        } catch (error) {
+          console.error('Error loading data from API:', error);
         }
       }
     };
+    
+    loadData();
+  }, [isAuthenticated, token]);
 
-    initializeAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        setIsAuthenticated(true);
-        setUser(session.user);
-        
-        // Load cart and wishlist from Supabase
-        const { cart: supabaseCart } = await getCart();
-        setCart(supabaseCart.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
-          name: item.product?.name || item.name,
-          price: item.price,
-          image: item.product?.images?.[0] || item.image,
-          size: item.size,
-          color: item.color,
-          quantity: item.quantity,
-          product: item.product
-        })));
-        
-        const { wishlist: supabaseWishlist } = await getWishlist();
-        setWishlist(supabaseWishlist.map(item => item.product_id || item.product?.id));
-      } else {
-        setIsAuthenticated(false);
-        setUser(null);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  // Save cart to localStorage when it changes (for guest users)
+  // Save cart to localStorage when it changes
   useEffect(() => {
     if (!isAuthenticated && cart.length > 0) {
       localStorage.setItem('kleoniverse_cart', JSON.stringify(cart));
     }
   }, [cart, isAuthenticated]);
 
-  // Save wishlist to localStorage when it changes (for guest users)
+  // Save wishlist to localStorage when it changes
   useEffect(() => {
     if (!isAuthenticated && wishlist.length > 0) {
       localStorage.setItem('kleoniverse_wishlist', JSON.stringify(wishlist));
     }
   }, [wishlist, isAuthenticated]);
 
-  const handleLogout = async () => {
-    // Clear backend tokens
+  const handleLogout = () => {
     localStorage.removeItem('kleoni_token');
     localStorage.removeItem('kleoni_user_id');
     localStorage.removeItem('kleoni_user');
     localStorage.removeItem('kleoniverse_cart');
     localStorage.removeItem('kleoniverse_wishlist');
     
-    // Also sign out from Supabase if logged in there
-    await supabase.auth.signOut();
-    
     setCart([]);
     setWishlist([]);
     setIsAuthenticated(false);
     setUser(null);
     
-    // Redirect to homepage
     window.location.href = '/';
   };
 
   const handleAddToCart = async (product, size, color, quantity = 1) => {
-    // Handle both object parameter (from ProductDetailPage) and separate parameters
     let finalProduct, finalSize, finalColor, finalQuantity;
     
     if (typeof product === 'object' && product !== null) {
-      // Called with single object from ProductDetailPage
       finalProduct = product;
-      finalSize = product.size;
-      finalColor = product.color;
-      finalQuantity = product.quantity || 1;
+      finalSize = size;
+      finalColor = color;
+      finalQuantity = quantity;
     } else {
-      // Called with separate parameters
       finalProduct = product;
       finalSize = size;
       finalColor = color;
@@ -327,50 +229,72 @@ function App() {
       product: finalProduct
     };
     
+    // Open cart drawer
+    setCartDrawerOpen(true);
+    
     if (isAuthenticated) {
-      // Use Supabase for authenticated users
-      const result = await supabaseAddToCart({
-        product_id: finalProduct.id,
-        quantity: finalQuantity,
-        size: finalSize,
-        color: finalColor,
-        price: finalProduct.price,
-      });
-      
-      if (result.success) {
-        // Reload cart from Supabase
-        const { cart: supabaseCart } = await getCart();
-        setCart(supabaseCart.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
-          name: item.product?.name || item.name,
-          price: item.price,
-          image: item.product?.images?.[0] || item.image,
-          size: item.size,
-          color: item.color,
-          quantity: item.quantity,
-          product: item.product
-        })));
-      }
-    } else {
-      // Use local state for guest users
-      setCart(prevCart => {
-        const existingIndex = prevCart.findIndex(
-          item => item.product_id === cartItem.product_id && item.size === cartItem.size && item.color === cartItem.color
-        );
+      try {
+        let variantId = finalProduct.variantId;
         
-        if (existingIndex >= 0) {
-          const newCart = [...prevCart];
-          newCart[existingIndex].quantity += finalQuantity;
-          localStorage.setItem('kleoniverse_cart', JSON.stringify(newCart));
-          return newCart;
+        if (finalProduct.variants && finalProduct.variants.length > 0 && finalSize && finalColor) {
+          const matchingVariant = finalProduct.variants.find(
+            v => v.size === finalSize && v.color === finalColor
+          );
+          if (matchingVariant) {
+            variantId = matchingVariant.id;
+          }
         }
         
-        const newCart = [...prevCart, { ...cartItem, id: Date.now().toString() }];
-        localStorage.setItem('kleoniverse_cart', JSON.stringify(newCart));
-        return newCart;
-      });
+        if (variantId) {
+          const result = await apiAddToCart({
+            productId: finalProduct.id,
+            variantId: variantId,
+            quantity: finalQuantity,
+            price: finalProduct.price,
+          });
+          
+          if (result.success) {
+            const { cart: apiCart } = await getCart();
+            setCart(apiCart.map(item => ({
+              id: item.variantId,
+              product_id: item.productId,
+              name: item.product?.name || item.name || finalProduct.name,
+              price: item.price,
+              image: item.product?.images?.[0] || item.image || finalProduct.images?.[0],
+              size: item.variant?.size || finalSize,
+              color: item.variant?.color || finalColor,
+              quantity: item.quantity,
+              product: item.product
+            })));
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('API error, falling back to localStorage:', error);
+      }
     }
+    
+    // Use local state for guest users or as fallback
+    setCart(prevCart => {
+      const existingIndex = prevCart.findIndex(
+        item => item.product_id === cartItem.product_id && item.size === cartItem.size && item.color === cartItem.color
+      );
+      
+      if (existingIndex >= 0) {
+        const newCart = [...prevCart];
+        newCart[existingIndex].quantity += finalQuantity;
+        if (!isAuthenticated) {
+          localStorage.setItem('kleoniverse_cart', JSON.stringify(newCart));
+        }
+        return newCart;
+      }
+      
+      const newCart = [...prevCart, { ...cartItem, id: Date.now().toString() }];
+      if (!isAuthenticated) {
+        localStorage.setItem('kleoniverse_cart', JSON.stringify(newCart));
+      }
+      return newCart;
+    });
   };
 
   const handleUpdateQuantity = async (id, size, color, quantity) => {
@@ -380,17 +304,17 @@ function App() {
     }
     
     if (isAuthenticated) {
-      const result = await supabaseUpdateCartQuantity(id, quantity);
+      const result = await apiUpdateCartQuantity(id, quantity);
       if (result.success) {
-        const { cart: supabaseCart } = await getCart();
-        setCart(supabaseCart.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
+        const { cart: apiCart } = await getCart();
+        setCart(apiCart.map(item => ({
+          id: item.variantId,
+          product_id: item.productId,
           name: item.product?.name || item.name,
           price: item.price,
           image: item.product?.images?.[0] || item.image,
-          size: item.size,
-          color: item.color,
+          size: item.variant?.size || item.size,
+          color: item.variant?.color || item.color,
           quantity: item.quantity,
           product: item.product
         })));
@@ -410,17 +334,17 @@ function App() {
 
   const handleRemoveItem = async (id, size, color) => {
     if (isAuthenticated) {
-      const result = await supabaseRemoveFromCart(id);
+      const result = await apiRemoveFromCart(id);
       if (result.success) {
-        const { cart: supabaseCart } = await getCart();
-        setCart(supabaseCart.map(item => ({
-          id: item.id,
-          product_id: item.product_id,
+        const { cart: apiCart } = await getCart();
+        setCart(apiCart.map(item => ({
+          id: item.variantId,
+          product_id: item.productId,
           name: item.product?.name || item.name,
           price: item.price,
           image: item.product?.images?.[0] || item.image,
-          size: item.size,
-          color: item.color,
+          size: item.variant?.size || item.size,
+          color: item.variant?.color || item.color,
           quantity: item.quantity,
           product: item.product
         })));
@@ -441,14 +365,13 @@ function App() {
       const isInWishlist = wishlist.includes(productId);
       
       if (isInWishlist) {
-        await supabaseRemoveFromWishlist(productId);
+        await apiRemoveFromWishlist(productId);
       } else {
-        await supabaseAddToWishlist(productId);
+        await apiAddToWishlist(productId);
       }
       
-      // Reload wishlist from Supabase
-      const { wishlist: supabaseWishlist } = await getWishlist();
-      setWishlist(supabaseWishlist.map(item => item.product_id || item.product?.id));
+      const { wishlist: apiWishlist } = await getWishlist();
+      setWishlist(apiWishlist.map(item => item.productId || item.product?.id));
     } else {
       setWishlist(prev =>
         prev.includes(productId)
@@ -457,14 +380,6 @@ function App() {
       );
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
 
   return (
     <BrowserRouter>
