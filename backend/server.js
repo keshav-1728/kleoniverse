@@ -1540,6 +1540,104 @@ app.delete('/api/v1/admin/products/:id', authenticateToken, requireAdmin, async 
 });
 
 // ============================================================================
+// PAYMENT ROUTES (Razorpay)
+// ============================================================================
+
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+
+// Initialize Razorpay instance
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+// Create payment order
+app.post('/api/v1/payment/create-order', authenticateToken, async (req, res) => {
+  try {
+    const { amount, currency = 'INR' } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json(apiResponse(false, null, 'Valid amount is required'));
+    }
+
+    // Amount should be in paise (Razorpay expects smallest currency unit)
+    const amountInPaise = Math.round(amount * 100);
+
+    const options = {
+      amount: amountInPaise,
+      currency,
+      receipt: `receipt_${Date.now()}`,
+      payment_capture: 1 // Auto-capture payment
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.status(200).json({
+      success: true,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID
+    });
+  } catch (error) {
+    console.error('Razorpay create order error:', error);
+    res.status(500).json(apiResponse(false, null, 'Failed to create payment order: ' + error.message));
+  }
+});
+
+// Verify payment signature
+app.post('/api/v1/payment/verify', authenticateToken, async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json(apiResponse(false, null, 'All payment details are required'));
+    }
+
+    // Generate signature for verification
+    const generatedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (generatedSignature === razorpay_signature) {
+      res.status(200).json(apiResponse(true, null, 'Payment verified successfully'));
+    } else {
+      res.status(400).json(apiResponse(false, null, 'Invalid payment signature'));
+    }
+  } catch (error) {
+    console.error('Razorpay verify error:', error);
+    res.status(500).json(apiResponse(false, null, 'Payment verification failed: ' + error.message));
+  }
+});
+
+// Get payment status
+app.get('/api/v1/payment/status/:paymentId', authenticateToken, async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    const payment = await razorpay.payments.fetch(paymentId);
+
+    res.status(200).json({
+      success: true,
+      payment: {
+        id: payment.id,
+        orderId: payment.order_id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        method: payment.method,
+        captured: payment.captured
+      }
+    });
+  } catch (error) {
+    console.error('Razorpay payment fetch error:', error);
+    res.status(500).json(apiResponse(false, null, 'Failed to get payment status: ' + error.message));
+  }
+});
+
+// ============================================================================
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 

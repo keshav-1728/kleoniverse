@@ -216,11 +216,106 @@ export default function CheckoutPage({ cart, onLogin, setCart }) {
     const totalAmount = subtotal + shipping;
     
     setPlacingOrder(true);
+    
+    // If prepaid (online payment), use Razorpay
+    if (paymentMethod === 'prepaid') {
+      try {
+        // Step 1: Create Razorpay order
+        const orderRes = await fetch(`${API_URL}/payment/create-order`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ amount: totalAmount })
+        });
+        const orderData = await orderRes.json();
+        
+        if (!orderData.success) {
+          toast.error('Failed to create payment order');
+          setPlacingOrder(false);
+          return;
+        }
+        
+        // Step 2: Open Razorpay checkout
+        const razorpayKeyId = orderData.keyId;
+        const razorpayOrderId = orderData.orderId;
+        
+        return new Promise((resolve) => {
+          const options = {
+            key: razorpayKeyId,
+            amount: orderData.amount,
+            currency: orderData.currency || 'INR',
+            name: 'KleoniVerse',
+            description: 'Order Payment',
+            order_id: razorpayOrderId,
+            handler: async function(response) {
+              // Payment successful - verify and create order
+              try {
+                // Verify payment with backend
+                const verifyRes = await fetch(`${API_URL}/payment/verify`, {
+                  method: 'POST',
+                  headers: getAuthHeaders(),
+                  body: JSON.stringify({
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature
+                  })
+                });
+                const verifyData = await verifyRes.json();
+                
+                if (!verifyData.success) {
+                  toast.error('Payment verification failed');
+                  setPlacingOrder(false);
+                  resolve(false);
+                  return;
+                }
+                
+                // Payment verified - create order
+                await createOrderAndClearCart(totalAmount);
+                resolve(true);
+              } catch (error) {
+                console.error('Payment verification error:', error);
+                toast.error('Payment verification failed');
+                setPlacingOrder(false);
+                resolve(false);
+              }
+            },
+            prefill: {
+              name: user?.name || '',
+              email: user?.email || '',
+              contact: selectedAddress?.phone || ''
+            },
+            theme: {
+              color: '#000000'
+            },
+            modal: {
+              ondismiss: function() {
+                setPlacingOrder(false);
+                toast.info('Payment cancelled');
+                resolve(false);
+              }
+            }
+          };
+          
+          const rzp = new window.Razorpay(options);
+          rzp.open();
+        });
+        
+      } catch (error) {
+        console.error('Razorpay error:', error);
+        toast.error('Payment failed');
+        setPlacingOrder(false);
+      }
+    } else {
+      // COD - create order directly
+      await createOrderAndClearCart(totalAmount);
+    }
+  };
+  
+  // Separate function to create order and clear cart
+  const createOrderAndClearCart = async (totalAmount) => {
     try {
-      // Format items for backend - need product and variant as MongoDB ObjectIds
       const orderItems = validCart.map(item => ({
         product: item.product_id,
-        variant: item.id, // This should be the variant ID
+        variant: item.id,
         name: item.name,
         size: item.size,
         color: item.color,

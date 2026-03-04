@@ -276,7 +276,7 @@ export default function HomePage({
             {styleCategories.map((style) => (
               <div
                 key={style.id}
-                onClick={() => navigate(`/search?style=${style.id}`)}
+                onClick={() => navigate('/products')}
                 className="relative overflow-hidden rounded-2xl cursor-pointer group aspect-[4/5]"
               >
                 <img 
@@ -380,7 +380,7 @@ export default function HomePage({
             {occasionCategories.map((occasion) => (
               <div
                 key={occasion.id}
-                onClick={() => navigate(`/search?occasion=${occasion.id}`)}
+                onClick={() => navigate('/products')}
                 className="relative overflow-hidden rounded-2xl cursor-pointer group aspect-[16/9]"
               >
                 <img 
