@@ -23,7 +23,10 @@ const Wishlist = require('./src/models/Wishlist');
 const Return = require('./src/models/Returns');
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true
+}));
 app.use(express.json());
 
 // JWT Secret
