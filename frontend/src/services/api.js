@@ -6,7 +6,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 // Base URL from environment or default
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({

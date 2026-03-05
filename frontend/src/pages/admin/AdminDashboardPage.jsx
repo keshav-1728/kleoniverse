@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Package, ShoppingCart, Users, DollarSign, RotateCcw } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState(null);

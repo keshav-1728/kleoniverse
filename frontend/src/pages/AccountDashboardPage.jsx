@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Package, MapPin, User, Plus, Trash2, Edit2, Save, X, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 export default function AccountDashboardPage() {
   const navigate = useNavigate();
