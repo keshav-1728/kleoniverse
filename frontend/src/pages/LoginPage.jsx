@@ -96,7 +96,7 @@ export default function LoginPage({ onLogin }) {
     <div className="min-h-screen pt-20 lg:pt-24" data-testid="login-page">
       <div className="max-w-md mx-auto px-4 py-16">
         <h1 className="font-display font-bold text-3xl lg:text-4xl tracking-tight text-center mb-8">
-          Welcome to Kleoniverse
+          Welcome to Kleoni Verse
         </h1>
 
         <Tabs defaultValue="login" className="w-full">

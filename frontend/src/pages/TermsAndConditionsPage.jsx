@@ -29,7 +29,7 @@ export default function TermsAndConditionsPage() {
                 <h2 className="font-display font-bold text-2xl">Introduction</h2>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Welcome to Kleoniverse. By accessing and using our website, you agree to be bound by 
+                Welcome to Kleoni Verse. By accessing and using our website, you agree to be bound by 
                 these Terms and Conditions. If you do not agree to these terms, please do not use our website. 
                 We reserve the right to update these terms at any time without prior notice.
               </p>
@@ -129,7 +129,7 @@ export default function TermsAndConditionsPage() {
               </div>
               <p className="text-muted-foreground leading-relaxed">
                 All content on this website, including images, logos, product designs, graphics, 
-                text, and branding, are the intellectual property of Kleoniverse. Unauthorized 
+                text, and branding, are the intellectual property of Kleoni Verse. Unauthorized 
                 reproduction, distribution, or use of any content without prior written consent 
                 is strictly prohibited.
               </p>
@@ -144,7 +144,7 @@ export default function TermsAndConditionsPage() {
                 <h2 className="font-display font-bold text-2xl">Limitation of Liability</h2>
               </div>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Kleoniverse shall not be liable for any indirect, incidental, special, or consequential 
+                Kleoni Verse shall not be liable for any indirect, incidental, special, or consequential 
                 damages arising from the use of our website or purchase of products. This includes:
               </p>
               <ul className="space-y-2 text-muted-foreground">

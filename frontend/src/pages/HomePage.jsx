@@ -462,7 +462,7 @@ export default function HomePage({
             
             <div className="relative max-w-2xl mx-auto text-center">
               <h2 className="font-display font-bold text-3xl lg:text-4xl tracking-tight mb-4">
-                Join the <span className="text-primary">Kleoniverse</span>
+                Join the <span className="text-primary">Kleoni Verse</span>
               </h2>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 Get early access to new drops, exclusive offers, and style inspiration delivered to your inbox.

@@ -47,9 +47,9 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["Manrope", "sans-serif"],
-        display: ["Syne", "sans-serif"],
-        mono: ["JetBrains Mono", "monospace"],
+        sans: ['Inter', 'sans-serif'],
+        display: ['Playfair Display', 'serif'],
+        mono: ['JetBrains Mono', 'monospace'],
       },
       backdropBlur: {
         xs: "2px",

@@ -58,7 +58,7 @@ export default function OurStoryPage() {
             <span className="text-primary-foreground/90">A Movement.</span>
           </h1>
           <p className="text-lg sm:text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-            Born from the streets, built for the bold. Kleoniverse is where underground culture meets high fashion.
+            Born from the streets, built for the bold. Kleoni Verse is where underground culture meets high fashion.
           </p>
           <Button 
             size="lg"
@@ -77,7 +77,7 @@ export default function OurStoryPage() {
             <div className="relative overflow-hidden rounded-2xl aspect-[4/5]">
               <img 
                 src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1200&auto=format&fit=crop"
-                alt="Kleoniverse Origin Story"
+                alt="Kleoni Verse Origin Story"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -89,7 +89,7 @@ export default function OurStoryPage() {
                 Born on the Streets
               </h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                Kleoniverse started in 2021 when a group of friends wanted something different. 
+                Kleoni Verse started in 2021 when a group of friends wanted something different. 
                 Not the mass-produced fashion flooding every store. Not the overpriced "luxury" that lost its soul.
               </p>
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
@@ -97,7 +97,7 @@ export default function OurStoryPage() {
                 That connected with the generation that grew up online but values what's real.
               </p>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                Today, Kleoniverse is more than a brand—it's a cultural statement. A collective of 
+                Today, Kleoni Verse is more than a brand—it's a cultural statement. A collective of 
                 artists, musicians, creators, and dreamers who believe fashion is the ultimate form of self-expression.
               </p>
             </div>
@@ -223,7 +223,7 @@ export default function OurStoryPage() {
                 More Than a Brand. A Community.
               </h2>
               <p className="text-lg text-white/80 mb-8 leading-relaxed">
-                Kleoniverse isn't just about what you wear—it's about who you are. Our community 
+                Kleoni Verse isn't just about what you wear—it's about who you are. Our community 
                 is made up of artists, musicians, creators, and dreamers from every corner of the globe.
               </p>
               <p className="text-lg text-white/80 mb-12 leading-relaxed">

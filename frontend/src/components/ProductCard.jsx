@@ -82,7 +82,7 @@ export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishl
 
       <div className="flex flex-col gap-1.5">
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-          {product.brand || 'Kleoniverse'}
+          {product.brand || 'Kleoni Verse'}
         </p>
         <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors duration-200">
           {product.name}
