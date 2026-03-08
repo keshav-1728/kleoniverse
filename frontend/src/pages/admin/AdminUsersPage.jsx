@@ -143,7 +143,8 @@ export default function AdminUsersPage() {
 
           {/* Users Table */}
           <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Name</th>
@@ -194,6 +195,7 @@ export default function AdminUsersPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Pagination */}

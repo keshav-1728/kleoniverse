@@ -187,7 +187,8 @@ export default function AdminReturnsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Returns Table */}
         <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Return ID</th>
@@ -259,8 +260,9 @@ export default function AdminReturnsPage() {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+            </table>
+            </div>
+          </div>
       </div>
 
       {/* Return Details Modal */}
