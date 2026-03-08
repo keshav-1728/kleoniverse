@@ -78,7 +78,7 @@ export default function HomePage({
       id: 'nightout',
       name: 'Night Out',
       description: 'Make a statement',
-      image: 'https://images.unsplash.com/photo-1566206091558-1a4cc6636190?w=800&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1514532079134-5735003a0d91?w=800&auto=format&fit=crop&q=80',
     },
   ];
 
@@ -123,7 +123,7 @@ export default function HomePage({
                 backgroundImage: `url(${categories[0].image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                minHeight: '300px'
+                minHeight: '320px'
               }}
             >
               <div className="hero-gradient-overlay absolute inset-0" />
@@ -142,7 +142,7 @@ export default function HomePage({
                 backgroundImage: `url(${categories[1].image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                minHeight: '300px'
+                minHeight: '320px'
               }}
             >
               <div className="hero-gradient-overlay absolute inset-0" />
