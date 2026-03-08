@@ -68,9 +68,9 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
               <img 
                 src="https://i.imgur.com/KV1q0Qz.png" 
                 alt="KV Logo" 
-                className="h-8 w-8 lg:h-10 lg:w-10 object-contain"
+                className="h-8 w-8 lg:h-10 lg:w-10 object-contain sm:hidden"
               />
-              <span className="font-display font-bold text-lg lg:text-xl tracking-tight hidden sm:block">
+              <span className="font-display font-bold text-lg lg:text-xl tracking-tight">
                 Kleoni Verse
               </span>
             </Link>

@@ -2,13 +2,13 @@ export const categories = [
   {
     id: 'men',
     name: 'Men',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=80&w=800&auto=format&fit=crop',
     subcategories: ['Shirts', 'Pants', 'Jackets', 'Shoes']
   },
   {
     id: 'women',
     name: 'Women',
-    image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=800&auto=format&fit=crop',
     subcategories: ['Tops', 'Dresses', 'Bottoms', 'Shoes']
   }
 ];
@@ -121,14 +121,14 @@ export const heroSlides = [
     id: 1,
     title: 'Where Luxury Meets the Pavement',
     subtitle: 'New Season Collection',
-    image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1600&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1469334031218-e382a71b716b?q=80&w=1600&auto=format&fit=crop',
     cta: 'Shop Now'
   },
   {
     id: 2,
     title: 'Organic. Unapologetic.',
     subtitle: 'Sustainable Streetwear',
-    image: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1200&auto=format&fit=crop',
+    image: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?q=80&w=1200&auto=format&fit=crop',
     cta: 'Explore'
   }
 ];

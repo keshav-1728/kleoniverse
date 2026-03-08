@@ -44,19 +44,19 @@ export default function HomePage({
       id: 'streetwear',
       name: 'Streetwear',
       description: 'Urban essentials',
-      image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=800&auto=format&fit=crop',
     },
     {
       id: 'minimalist',
       name: 'Minimalist',
       description: 'Clean lines, timeless',
-      image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1503342394128-c104d54dba01?q=80&w=800&auto=format&fit=crop',
     },
     {
       id: 'athletic',
       name: 'Athletic',
       description: 'Movement & comfort',
-      image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=800&auto=format&fit=crop',
     },
   ];
 
@@ -72,13 +72,13 @@ export default function HomePage({
       id: 'weekend',
       name: 'Weekend Vibes',
       description: 'Casual comfort',
-      image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1516762689617-e1cffcef479d?w=800&auto=format&fit=crop&q=80',
     },
     {
       id: 'nightout',
       name: 'Night Out',
       description: 'Make a statement',
-      image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1566206091558-1a4cc6636190?w=800&auto=format&fit=crop&q=80',
     },
   ];
 
