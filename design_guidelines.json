@@ -1,0 +1,183 @@
+{
+  "brand_identity": {
+    "name": "Kleoniverse",
+    "mission": "Premium streetwear for the digital generation. Where luxury meets the pavement.",
+    "persona": "The Curator",
+    "tone": "Sophisticated, Urban, Unapologetic, Grounded",
+    "archetype": "Organic & Earthy (Refined Streetwear)"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Syne, sans-serif",
+      "weights": ["700", "800"],
+      "usage": "Use for all major headings (H1-H3). Tight tracking (-0.02em) for impactful display.",
+      "fallback": "display"
+    },
+    "body": {
+      "font_family": "Manrope, sans-serif",
+      "weights": ["400", "500", "600"],
+      "usage": "Use for all UI text, product descriptions, and metadata. High legibility.",
+      "fallback": "sans-serif"
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "weights": ["400"],
+      "usage": "Use for product SKUs, technical specs, and decorative micro-labels."
+    },
+    "import_url": "https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Syne:wght@400..800&family=JetBrains+Mono:wght@400&display=swap"
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "#556B2F",
+        "foreground": "#FFFFFF",
+        "description": "Olive Green - The grounded anchor of the brand."
+      },
+      "secondary": {
+        "DEFAULT": "#E8E6E1",
+        "foreground": "#1A1A1A",
+        "description": "Bone/Warm Grey - Softer than white, adds premium feel."
+      },
+      "accent": {
+        "DEFAULT": "#D94E3B",
+        "foreground": "#FFFFFF",
+        "description": "Burnt Sienna - For sale tags, urgency, and micro-interactions."
+      },
+      "background": {
+        "DEFAULT": "#FDFCF8",
+        "dark": "#121212"
+      },
+      "foreground": {
+        "DEFAULT": "#1A1A1A",
+        "muted": "#666666"
+      },
+      "border": "#E5E5E5",
+      "muted": "#F5F5F0"
+    },
+    "gradients": {
+      "hero_overlay": "linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%)",
+      "subtle_glow": "radial-gradient(circle at 50% 50%, rgba(85, 107, 47, 0.15), transparent 70%)"
+    }
+  },
+  "layout_system": {
+    "container": {
+      "max_width": "1600px",
+      "padding": "2rem",
+      "mobile_padding": "1rem"
+    },
+    "grid_styles": {
+      "tetris_grid": "grid grid-cols-1 md:grid-cols-12 gap-4 auto-rows-[minmax(300px,auto)]",
+      "product_grid": "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-12"
+    },
+    "spacing": {
+      "section_gap": "6rem",
+      "element_gap": "1.5rem"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-primary-foreground rounded-full px-8 py-4 font-bold text-sm uppercase tracking-wide hover:scale-105 transition-all duration-300",
+      "secondary": "bg-transparent border border-foreground/20 text-foreground rounded-full px-8 py-4 font-bold text-sm uppercase tracking-wide hover:bg-foreground hover:text-background transition-all duration-300",
+      "icon": "p-3 rounded-full hover:bg-muted transition-colors"
+    },
+    "cards": {
+      "product": "group relative flex flex-col gap-3",
+      "product_image": "aspect-[3/4] overflow-hidden rounded-xl bg-muted relative",
+      "feature": "bg-secondary/30 p-8 rounded-2xl border border-transparent hover:border-foreground/10 transition-colors"
+    },
+    "inputs": {
+      "base": "h-12 bg-transparent border-b border-foreground/20 rounded-none px-0 focus:border-foreground transition-colors placeholder:text-muted-foreground/50 font-medium"
+    },
+    "navigation": {
+      "sticky_header": "fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-foreground/5 transition-all duration-300",
+      "mega_menu": "absolute top-full left-0 w-full bg-background border-b border-border py-12 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "soft": "0 10px 40px -10px rgba(0,0,0,0.05)",
+      "float": "0 20px 40px -10px rgba(0,0,0,0.1)"
+    },
+    "radius": {
+      "default": "0.75rem",
+      "button": "9999px"
+    },
+    "motion": {
+      "hover_lift": "hover:-translate-y-1 transition-transform duration-300 ease-out",
+      "image_reveal": "transition-all duration-700 ease-[0.22, 1, 0.36, 1]"
+    }
+  },
+  "image_urls": {
+    "hero": [
+      {
+        "url": "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1600&auto=format&fit=crop",
+        "alt": "Streetwear Hero 1",
+        "category": "hero_main"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?q=80&w=1200&auto=format&fit=crop",
+        "alt": "Male Model Hoodie",
+        "category": "hero_secondary"
+      }
+    ],
+    "categories": [
+      {
+        "name": "Men",
+        "url": "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop"
+      },
+      {
+        "name": "Women",
+        "url": "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop"
+      },
+      {
+        "name": "Accessories",
+        "url": "https://images.unsplash.com/photo-1523293182086-7651a899d37f?q=80&w=800&auto=format&fit=crop"
+      },
+      {
+        "name": "Sneakers",
+        "url": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop"
+      }
+    ],
+    "products": [
+      "https://images.unsplash.com/photo-1550246140-29f40b90ea27?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1551488852-080175d9e831?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1617137968427-85924c809a10?q=80&w=600&auto=format&fit=crop",
+      "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?q=80&w=600&auto=format&fit=crop"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "IMPERATIVE: Use the specific fonts 'Syne' and 'Manrope'. Add the Google Fonts import link to the index.html or CSS.",
+    "IMPERATIVE: Implement the 'Tetris Grid' for the Hero section. Do not use a simple full-width slider.",
+    "IMPERATIVE: The Product Card must have a 'Quick View' button that appears on hover in the center of the image.",
+    "IMPERATIVE: Use 'Sonner' for all toast notifications (Added to Cart, Wishlist updated).",
+    "IMPERATIVE: Ensure the Navbar is sticky and has a backdrop-blur effect.",
+    "IMPERATIVE: Mobile menu must be a side drawer (Sheet component).",
+    "IMPERATIVE: For the 'Filters', use a Sidebar on Desktop and a Drawer on Mobile.",
+    "IMPERATIVE: Do not use default Shadcn buttons without the 'rounded-full' class overrides to match the brand.",
+    "IMPERATIVE: Use the provided Unsplash URLs for mock data. Do not leave src attributes empty."
+  ],
+  "accessibility_rules": [
+    "Ensure all images have descriptive alt text.",
+    "Focus states must be visible (use ring-offset-2 ring-2 ring-primary).",
+    "Text contrast ratios must meet AA standards (4.5:1 for normal text).",
+    "Interactive elements must have a minimum touch target of 44x44px."
+  ],
+  "universal_guidelines": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: transition: all.",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations.",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use sonner for toasts"
+  ]
+}
