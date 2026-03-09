@@ -78,7 +78,7 @@ export default function HomePage({
       id: 'nightout',
       name: 'Night Out',
       description: 'Make a statement',
-      image: 'https://images.unsplash.com/photo-1514532079134-5735003a0d91?w=800&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80',
     },
   ];
 
@@ -225,9 +225,7 @@ export default function HomePage({
               <div
                 key={category.id}
                 onClick={() => navigate(`/category/${category.id}`)}
-                className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
-                  index === 0 ? 'md:row-span-2 min-h-[400px]' : 'min-h-[200px]'
-                }`}
+                className="relative overflow-hidden rounded-2xl cursor-pointer group min-h-[300px]"
               >
                 <img 
                   src={category.image} 

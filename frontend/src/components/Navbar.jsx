@@ -66,7 +66,7 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
 
             <Link to="/" className="flex items-center gap-2">
               <img 
-                src="https://i.imgur.com/KV1q0Qz.png" 
+                src="https://postimg.cc/N9GkFmYT" 
                 alt="KV Logo" 
                 className="h-8 w-8 lg:h-10 lg:w-10 object-contain sm:hidden"
               />
