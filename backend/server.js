@@ -1220,6 +1220,31 @@ app.get('/api/v1/admin/users', authenticateToken, requireAdmin, async (req, res)
   }
 });
 
+// Update user role (admin)
+app.put('/api/v1/admin/users/:id/role', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!role || !['user', 'admin'].includes(role)) {
+      return res.status(400).json(apiResponse(false, null, 'Invalid role'));
+    }
+    
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json(apiResponse(false, null, 'User not found'));
+    }
+    
+    user.role = role;
+    await user.save();
+    
+    res.json(apiResponse(true, { user: { id: user._id, name: user.name, email: user.email, role: user.role } }, 'User role updated'));
+  } catch (error) {
+    console.error('Admin update user role error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
 // Get all orders (admin)
 app.get('/api/v1/admin/orders', authenticateToken, requireAdmin, async (req, res) => {
   try {
