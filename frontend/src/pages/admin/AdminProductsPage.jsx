@@ -209,44 +209,9 @@ export default function AdminProductsPage() {
         </Button>
       </div>
 
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r transform transition-transform lg:translate-x-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-primary">KLEONI</h1>
-          <p className="text-sm text-muted-foreground">Admin Dashboard</p>
-        </div>
-        
-        <nav className="px-4 space-y-2">
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <item.icon className="w-5 h-5" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-            onClick={() => { localStorage.removeItem('kleoni_token'); navigate('/login'); }}
-          >
-            <LogOut className="w-5 h-5 mr-2" />
-            Logout
-          </Button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main className="lg:ml-64 min-h-screen">
-        <div className="p-8">
+      {/* Main content - full width */}
+      <div className="w-full">
+        <div className="p-6 lg:p-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-2xl font-bold">Product Management</h1>
             <Button onClick={() => setShowModal(true)}>
@@ -362,7 +327,7 @@ export default function AdminProductsPage() {
             </Button>
           </div>
         </div>
-      </main>
+      </div>
 
       {/* Add/Edit Product Modal */}
       {showModal && (
