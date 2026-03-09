@@ -1644,7 +1644,7 @@ app.get('/api/v1/payment/status/:paymentId', authenticateToken, async (req, res)
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kleoniverse';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://keshavmehrotra2817_db_user:Divyansh%4026@kleoniverse.dpbemb7.mongodb.net/?appName=Kleoniverse';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
