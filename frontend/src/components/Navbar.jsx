@@ -65,11 +65,6 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
             </Sheet>
 
             <Link to="/" className="flex items-center gap-2">
-              <img 
-                src="https://postimg.cc/N9GkFmYT" 
-                alt="KV Logo" 
-                className="h-8 w-8 lg:h-10 lg:w-10 object-contain sm:hidden"
-              />
               <span className="font-display font-extrabold text-xl lg:text-2xl tracking-tight">
                 Kleoni Verse
               </span>

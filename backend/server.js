@@ -22,9 +22,28 @@ const Order = require('./src/models/Order');
 const Wishlist = require('./src/models/Wishlist');
 const Return = require('./src/models/Returns');
 
-// Middleware
+// Middleware - CORS with dynamic origin handling
+const allowedOrigins = [
+  'https://kleoniverse.com',
+  'https://kleoniverse.com/',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || '*',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Normalize origin by removing trailing slash
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes(normalizedOrigin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
@@ -1669,7 +1688,7 @@ app.get('/api/v1/payment/status/:paymentId', authenticateToken, async (req, res)
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/kleoniverse';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://keshavmehrotra2817_db_user:Divyansh%4026@kleoniverse.dpbemb7.mongodb.net/?appName=Kleoniverse';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {

@@ -15,7 +15,6 @@ export default function ProductDetailPage({
   onAddToCart, 
   wishlist, 
   onToggleWishlist,
-  onQuickView,
   onOpenCart
 }) {
   const { productId } = useParams();
@@ -340,7 +339,6 @@ export default function ProductDetailPage({
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onQuickView={onQuickView}
                   wishlist={wishlist}
                   onToggleWishlist={onToggleWishlist}
                 />

@@ -7,7 +7,6 @@ import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export default function SearchResultsPage({ 
-  onQuickView, 
   wishlist, 
   onToggleWishlist 
 }) {
@@ -83,7 +82,6 @@ export default function SearchResultsPage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />

@@ -200,7 +200,7 @@ export default function OurStoryPage() {
                 <div className="space-y-4 pt-8">
                   <div className="aspect-square rounded-xl overflow-hidden">
                     <img 
-                      src="https://images.unsplash.com/photo-1550246140-29f40b909ea2?q=80&w=600&auto=format&fit=crop"
+                      src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=600&auto=format&fit=crop"
                       alt="Community 3"
                       className="w-full h-full object-cover"
                     />

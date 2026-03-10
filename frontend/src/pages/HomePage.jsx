@@ -1,19 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
-import { categories, heroSlides } from '@/data/mockData';
+import { categories, heroSlides, products as mockProducts } from '@/data/mockData';
 import { ArrowRight, Leaf, Award, Truck, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import apiService from '@/services/api';
 
 export default function HomePage({ 
-  onQuickView, 
   wishlist, 
   onToggleWishlist 
 }) {
   const navigate = useNavigate();
   const [currentHero, setCurrentHero] = useState(0);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(mockProducts);
   const [loading, setLoading] = useState(true);
 
   // Fetch products from API
@@ -322,7 +321,6 @@ export default function HomePage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />
@@ -355,7 +353,6 @@ export default function HomePage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />
@@ -511,7 +508,6 @@ export default function HomePage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />

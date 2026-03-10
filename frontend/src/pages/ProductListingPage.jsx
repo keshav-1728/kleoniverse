@@ -11,7 +11,6 @@ import { SlidersHorizontal, Loader2 } from 'lucide-react';
 const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 export default function ProductListingPage({ 
-  onQuickView, 
   wishlist, 
   onToggleWishlist,
   sort: initialSort
@@ -153,7 +152,6 @@ export default function ProductListingPage({
                     <ProductCard
                       key={product.id}
                       product={product}
-                      onQuickView={onQuickView}
                       wishlist={wishlist}
                       onToggleWishlist={onToggleWishlist}
                     />

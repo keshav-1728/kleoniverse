@@ -1,11 +1,11 @@
-import { Heart, Eye } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishlist }) => {
+export const ProductCard = ({ product, wishlist = [], onToggleWishlist }) => {
   const navigate = useNavigate();
   const [currentImage, setCurrentImage] = useState(0);
   
@@ -56,18 +56,6 @@ export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishl
             {discount}% OFF
           </Badge>
         )}
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onQuickView(product);
-          }}
-          data-testid={`quick-view-${product.id}`}
-          className="quick-view-btn absolute inset-x-4 bottom-4 mx-auto w-full max-w-[200px] h-11 bg-background/95 backdrop-blur-sm rounded-full flex items-center justify-center gap-2 font-semibold text-sm uppercase tracking-wide hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-        >
-          <Eye className="w-4 h-4" />
-          Quick View
-        </button>
       </div>
 
       <button
