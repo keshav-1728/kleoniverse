@@ -30,6 +30,7 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
   const menuItems = [
     { label: 'Men', path: '/category/men' },
     { label: 'Women', path: '/category/women' },
+    { label: 'Unifit', path: '/category/unifit' },
     { label: 'New Arrivals', path: '/new-arrivals' },
     { label: 'Sale', path: '/sale' },
   ];

@@ -15,7 +15,8 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -236,6 +237,7 @@ export default function AdminProductsPage() {
               <option value="">All Categories</option>
               <option value="men">Men</option>
               <option value="women">Women</option>
+              <option value="unifit">Unifit</option>
             </select>
           </div>
 
@@ -370,6 +372,7 @@ export default function AdminProductsPage() {
                   >
                     <option value="men">Men</option>
                     <option value="women">Women</option>
+                    <option value="unifit">Unifit</option>
                   </select>
                 </div>
                 <div>
@@ -506,6 +509,43 @@ export default function AdminProductsPage() {
                 >
                   <Plus className="w-4 h-4 mr-1" /> Add Another Image
                 </Button>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-2">Or Upload Images from System</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.target.files);
+                      if (files.length > 0) {
+                        // Convert files to data URLs and add to imageUrls
+                        files.forEach((file, index) => {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setFormData(prev => ({
+                              ...prev,
+                              imageUrls: [...prev.imageUrls, reader.result]
+                            }));
+                          };
+                          reader.readAsDataURL(file);
+                        });
+                      }
+                    }}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label htmlFor="image-upload" className="cursor-pointer">
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm text-gray-500">Click to upload images</p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
+                  </label>
+                </div>
+                {formData.imageUrls.some(url => url.startsWith('data:')) && (
+                  <p className="text-xs text-green-600 mt-2">✓ {formData.imageUrls.filter(url => url.startsWith('data:')).length} image(s) uploaded</p>
+                )}
               </div>
 
               <Button type="submit" className="w-full">

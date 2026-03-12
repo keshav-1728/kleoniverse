@@ -27,7 +27,7 @@ export default function ProductListingPage({
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
 
-  const categoryName = categoryId === 'men' ? 'Men' : categoryId === 'women' ? 'Women' : 'All Products';
+  const categoryName = categoryId === 'men' ? 'Men' : categoryId === 'women' ? 'Women' : categoryId === 'unifit' ? 'Unifit' : 'All Products';
 
   // Fetch products from API
   useEffect(() => {
