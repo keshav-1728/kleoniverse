@@ -23,16 +23,17 @@ import { toast } from 'sonner';
 const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 // Predefined options for product attributes
-const SIZE_OPTIONS = ['28', '32', '34', '36', '38', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
+const SIZE_OPTIONS = ['Free Size', 'One Size', '28', '30', '32', '34', '36', '38', '40', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'];
 
 const COLOR_OPTIONS = [
   'Black', 'White', 'Navy', 'Blue', 'Red', 'Green', 'Grey', 'Brown', 
-  'Pink', 'Purple', 'Orange', 'Yellow', 'Beige', 'Maroon', 'Olive', 'Cream'
+  'Pink', 'Purple', 'Orange', 'Yellow', 'Beige', 'Maroon', 'Olive', 'Cream',
+  'Peach', 'Mauve', 'Multicolor'
 ];
 
 const SUBCATEGORY_OPTIONS = {
-  men: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets', 'Hoodies', 'Sweaters', 'Kurta', 'Shorts'],
-  women: ['Tops', 'Dresses', 'Jeans', 'Skirts', 'Jackets', 'Hoodies', 'Sweaters', 'Kurtas', 'Leggings']
+  men: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets', 'Hoodies', 'Sweaters', 'Kurta', 'Shorts', 'Co-ord Sets'],
+  women: ['Tops', 'Dresses', 'Jeans', 'Skirts', 'Jackets', 'Hoodies', 'Sweaters', 'Kurtas', 'Leggings', 'Co-ord Sets']
 };
 
 export default function AdminProductsPage() {

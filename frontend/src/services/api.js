@@ -38,6 +38,7 @@ api.interceptors.response.use(
       
       // Handle 401 - Unauthorized
       if (status === 401) {
+        localStorage.removeItem('kleoni_token');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -91,12 +92,17 @@ export const apiService = {
 
   // Set auth token
   setToken: (token: string) => {
+    localStorage.setItem('kleoni_token', token);
     localStorage.setItem('token', token);
   },
 
   // Remove auth token
   removeToken: () => {
+    localStorage.removeItem('kleoni_token');
     localStorage.removeItem('token');
+    localStorage.removeItem('kleoni_user');
+    localStorage.removeItem('user');
+    localStorage.removeItem('kleoni_user_id');
   },
 
   // Get current token

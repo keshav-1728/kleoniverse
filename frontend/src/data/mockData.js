@@ -3,13 +3,13 @@ export const categories = [
     id: 'men',
     name: 'Men',
     image: 'https://images.unsplash.com/photo-1617137984095-74e4e5e3613f?q=80&w=800&auto=format&fit=crop',
-    subcategories: ['Shirts', 'Pants', 'Jackets', 'Shoes']
+    subcategories: ['Shirts', 'T-Shirts', 'Pants', 'Jackets', 'Shoes', 'Hoodies', 'Kurta', 'Shorts', 'Co-ord Sets']
   },
   {
     id: 'women',
     name: 'Women',
     image: 'https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=800&auto=format&fit=crop',
-    subcategories: ['Tops', 'Dresses', 'Bottoms', 'Shoes']
+    subcategories: ['Tops', 'Dresses', 'Bottoms', 'Shoes', 'Skirts', 'Jackets', 'Hoodies', 'Kurtas', 'Leggings', 'Co-ord Sets']
   }
 ];
 
@@ -21,13 +21,13 @@ export const products = [
     price: 2499,
     originalPrice: 3499,
     category: 'men',
-    subcategory: 'Shirts',
+    subcategory: 'T-Shirts',
     images: [
       'https://images.unsplash.com/photo-1550246140-29f40b90ea27?q=80&w=600&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?q=80&w=600&auto=format&fit=crop'
     ],
-    sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    colors: ['Olive', 'Black', 'Bone'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'Free Size'],
+    colors: ['Olive', 'Black', 'Bone', 'Peach', 'Mauve'],
     rating: 4.5,
     reviews: 128,
     description: 'Premium organic cotton with a relaxed fit. Perfect for everyday wear.',
@@ -46,8 +46,8 @@ export const products = [
       'https://images.unsplash.com/photo-1576566588028-4147f3842f27?q=80&w=600&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=600&auto=format&fit=crop'
     ],
-    sizes: ['S', 'M', 'L', 'XL'],
-    colors: ['Indigo', 'Black'],
+    sizes: ['S', 'M', 'L', 'XL', 'One Size'],
+    colors: ['Indigo', 'Black', 'Blue', 'Multicolor'],
     rating: 4.8,
     reviews: 89,
     description: 'Classic denim with modern details. Timeless style.',
@@ -61,13 +61,13 @@ export const products = [
     price: 3999,
     originalPrice: 4999,
     category: 'men',
-    subcategory: 'Shirts',
+    subcategory: 'Hoodies',
     images: [
       'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=600&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=600&auto=format&fit=crop'
     ],
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    colors: ['Sage', 'Charcoal', 'Cream'],
+    sizes: ['S', 'M', 'L', 'XL', 'XXL', 'Free Size'],
+    colors: ['Sage', 'Charcoal', 'Cream', 'Peach', 'Mauve'],
     rating: 4.9,
     reviews: 312,
     description: 'Streetwear staple. Premium heavyweight cotton.',
@@ -86,8 +86,8 @@ export const products = [
       'https://images.unsplash.com/photo-1617137968427-85924c809a10?q=80&w=600&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1594633313593-bab3825d0caf?q=80&w=600&auto=format&fit=crop'
     ],
-    sizes: ['XS', 'S', 'M', 'L'],
-    colors: ['Black', 'Camel', 'Navy'],
+    sizes: ['XS', 'S', 'M', 'L', '28', '30', '32', '34'],
+    colors: ['Black', 'Camel', 'Navy', 'Peach', 'Mauve'],
     rating: 4.4,
     reviews: 67,
     description: 'Elegant silhouette with modern cut. Office to evening.',
@@ -106,8 +106,8 @@ export const products = [
       'https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=600&auto=format&fit=crop',
       'https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f?q=80&w=600&auto=format&fit=crop'
     ],
-    sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    colors: ['Oat', 'Moss', 'Charcoal'],
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'Free Size'],
+    colors: ['Oat', 'Moss', 'Charcoal', 'Peach', 'Mauve', 'Multicolor'],
     rating: 4.7,
     reviews: 156,
     description: 'Cozy meets chic. Form-flattering silhouette.',
