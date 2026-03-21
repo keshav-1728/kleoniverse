@@ -7,10 +7,32 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
+  api_key: process.env.CLOUDINARY_API_KEY || 'your-api-key',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'your-api-secret'
+});
+
+// Multer storage configuration for Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'kleoniverse-products',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+  }
+});
+
+const upload = multer({ storage: storage });
 
 // Import Models
 const User = require('./src/models/User');
@@ -49,6 +71,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'kleoniverse_jwt_secret_key_2024';
@@ -1683,6 +1706,42 @@ app.get('/api/v1/payment/status/:paymentId', authenticateToken, async (req, res)
   } catch (error) {
     console.error('Razorpay payment fetch error:', error);
     res.status(500).json(apiResponse(false, null, 'Failed to get payment status: ' + error.message));
+  }
+});
+
+// ============================================================================
+// IMAGE UPLOAD ENDPOINT
+// ============================================================================
+
+// Upload single image
+app.post('/api/v1/upload/image', authenticateToken, requireAdmin, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json(apiResponse(false, null, 'No image provided'));
+    }
+    
+    // Return the Cloudinary URL
+    const imageUrl = req.file.path;
+    res.json(apiResponse(true, { url: imageUrl }, 'Image uploaded successfully'));
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// Upload multiple images
+app.post('/api/v1/upload/images', authenticateToken, requireAdmin, upload.array('images', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json(apiResponse(false, null, 'No images provided'));
+    }
+    
+    // Return the Cloudinary URLs
+    const imageUrls = req.files.map(file => file.path);
+    res.json(apiResponse(true, { urls: imageUrls }, 'Images uploaded successfully'));
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
   }
 });
 

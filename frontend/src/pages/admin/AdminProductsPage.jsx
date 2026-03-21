@@ -59,9 +59,34 @@ export default function AdminProductsPage() {
     imageUrls: ['']
   });
 
-  const getAuthHeaders = () => {
+  const getAuthHeaders = (includeJson = true) => {
     const token = localStorage.getItem('kleoni_token');
-    return token ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' } : {};
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    if (includeJson) {
+      headers['Content-Type'] = 'application/json';
+    }
+    return headers;
+  };
+
+  // Upload image to backend (Cloudinary)
+  const uploadImageToBackend = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    const res = await fetch(`${API_URL}/upload/image`, {
+      method: 'POST',
+      headers: {
+        'Authorization': localStorage.getItem('kleoni_token') ? `Bearer ${localStorage.getItem('kleoni_token')}` : ''
+      },
+      body: formData
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      return data.data.url;
+    } else {
+      throw new Error(data.message || 'Failed to upload image');
+    }
   };
 
   useEffect(() => {
@@ -76,7 +101,7 @@ export default function AdminProductsPage() {
       url.searchParams.append('page', page);
       url.searchParams.append('limit', 10);
 
-      const res = await fetch(url, { headers: getAuthHeaders() });
+      const res = await fetch(url, { headers: getAuthHeaders(false) });
       const data = await res.json();
       
       if (data.success) {
@@ -175,7 +200,7 @@ export default function AdminProductsPage() {
     try {
       const res = await fetch(`${API_URL}/admin/products/${productId}`, {
         method: 'DELETE',
-        headers: getAuthHeaders()
+        headers: getAuthHeaders(false)
       });
       
       const data = await res.json();
@@ -519,20 +544,22 @@ export default function AdminProductsPage() {
                     type="file"
                     accept="image/*"
                     multiple
-                    onChange={(e) => {
+                    onChange={async (e) => {
                       const files = Array.from(e.target.files);
                       if (files.length > 0) {
-                        // Convert files to data URLs and add to imageUrls
-                        files.forEach((file, index) => {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
+                        // Upload each file to backend (Cloudinary)
+                        for (const file of files) {
+                          try {
+                            const imageUrl = await uploadImageToBackend(file);
                             setFormData(prev => ({
                               ...prev,
-                              imageUrls: [...prev.imageUrls, reader.result]
+                              imageUrls: [...prev.imageUrls.filter(url => url && url.trim() !== ''), imageUrl]
                             }));
-                          };
-                          reader.readAsDataURL(file);
-                        });
+                            toast.success(`Image uploaded: ${file.name}`);
+                          } catch (error) {
+                            toast.error(`Failed to upload ${file.name}: ${error.message}`);
+                          }
+                        }
                       }
                     }}
                     className="hidden"
@@ -544,8 +571,8 @@ export default function AdminProductsPage() {
                     <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
                   </label>
                 </div>
-                {formData.imageUrls.some(url => url.startsWith('data:')) && (
-                  <p className="text-xs text-green-600 mt-2">✓ {formData.imageUrls.filter(url => url.startsWith('data:')).length} image(s) uploaded</p>
+                {formData.imageUrls.filter(url => url && !url.startsWith('data:') && url.trim() !== '').length > 0 && (
+                  <p className="text-xs text-green-600 mt-2">✓ {formData.imageUrls.filter(url => url && !url.startsWith('data:') && url.trim() !== '').length} image(s) uploaded</p>
                 )}
               </div>
 
