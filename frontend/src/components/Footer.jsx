@@ -73,7 +73,17 @@ export const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p>© 2026 Kleoni Verse. All rights reserved.</p>
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <p>© 2026 Kleoni Verse. All rights reserved.</p>
+            <a 
+              href="https://thesocialhood.in/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors text-xs"
+            >
+              Managed by The SocialHood Company
+            </a>
+          </div>
           <div className="flex gap-6">
             <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
