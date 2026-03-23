@@ -37,7 +37,7 @@ export const ProductCard = ({ product, wishlist = [], onToggleWishlist }) => {
         className="aspect-[3/4] overflow-hidden rounded-xl bg-muted relative shadow-card hover:shadow-card-hover transition-shadow duration-300"
         onMouseEnter={() => images[1] && setCurrentImage(1)}
         onMouseLeave={() => setCurrentImage(0)}
-        onClick={() => navigate(`/product/${product.id}`)}
+        onClick={() => navigate(`/product/${(product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product'}-${(product.id || '').slice(-6)}`)}
       >
         <img 
           src={currentImg} 

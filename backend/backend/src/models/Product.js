@@ -62,6 +62,14 @@ productSchema.virtual('variants', {
   foreignField: 'productId'
 });
 
+// Virtual for URL slug
+productSchema.virtual('slug').get(function() {
+  return this.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') + '-' + this._id.toString().slice(-6);
+});
+
 productSchema.set('toJSON', { virtuals: true });
 productSchema.set('toObject', { virtuals: true });
 

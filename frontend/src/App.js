@@ -62,7 +62,7 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
         <Route path="/new-arrivals" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} sort="new" />} />
         <Route path="/category/:categoryId" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/sale" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
-        <Route path="/product/:productId" element={<ProductDetailPage onAddToCart={handleAddToCart} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onOpenCart={() => setCartDrawerOpen(true)} />} />
+        <Route path="/product/:slug" element={<ProductDetailPage onAddToCart={handleAddToCart} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onOpenCart={() => setCartDrawerOpen(true)} />} />
         <Route path="/search" element={<SearchResultsPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/cart" element={<CartPage cart={cart} onUpdateQuantity={handleUpdateQuantity} onRemoveItem={handleRemoveItem} />} />

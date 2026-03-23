@@ -17,7 +17,7 @@ export default function ProductDetailPage({
   onToggleWishlist,
   onOpenCart
 }) {
-  const { productId } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +27,7 @@ export default function ProductDetailPage({
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/products/${productId}`);
+        const res = await fetch(`${API_URL}/products/slug/${slug}`);
         const data = await res.json();
         
         if (data.success && data.data && data.data.product) {
@@ -37,7 +37,7 @@ export default function ProductDetailPage({
           const relatedRes = await fetch(`${API_URL}/products?category=${data.data.product.category}&limit=4`);
           const relatedData = await relatedRes.json();
           if (relatedData.success && relatedData.data) {
-            setRelatedProducts(relatedData.data.products.filter(p => p.id !== productId));
+            setRelatedProducts(relatedData.data.products.filter(p => p.id !== data.data.product.id));
           }
         } else {
           setProduct(null);
@@ -50,10 +50,10 @@ export default function ProductDetailPage({
       }
     };
     
-    if (productId) {
+    if (slug) {
       fetchProduct();
     }
-  }, [productId]);
+  }, [slug]);
   
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');

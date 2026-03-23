@@ -397,6 +397,60 @@ app.get('/api/v1/products/:id', async (req, res) => {
   }
 });
 
+// Get single product by slug
+app.get('/api/v1/products/slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    // Extract product ID from slug (last part after dash)
+    const productId = slug.split('-').slice(-1)[0];
+    const product = await Product.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json(apiResponse(false, null, 'Product not found'));
+    }
+    
+    const variants = await ProductVariant.find({ productId: product._id });
+    
+    const sizes = variants.length > 0 
+      ? [...new Set(variants.map(v => v.size))]
+      : (product.sizes || []);
+    const colors = variants.length > 0 
+      ? [...new Set(variants.map(v => v.color))]
+      : (product.colors || []);
+    
+    res.json(apiResponse(true, {
+      product: {
+        id: product._id,
+        name: product.name,
+        description: product.description,
+        category: product.category,
+        subcategory: product.subcategory || '',
+        price: product.basePrice,
+        base_price: product.basePrice,
+        discount: product.discount || 0,
+        stock: product.stock || 0,
+        status: product.status || 'active',
+        images: product.images || [],
+        created_at: product.createdAt,
+        sizes: sizes,
+        colors: colors,
+        variants: variants.map(v => ({
+          id: v._id,
+          size: v.size,
+          color: v.color,
+          price: v.price,
+          stock: v.stock,
+          image: v.image
+        }))
+      }
+    }, 'Product fetched successfully'));
+  } catch (error) {
+    console.error('Get product by slug error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
 // Create product (admin)
 app.post('/api/v1/products', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -1742,6 +1796,180 @@ app.post('/api/v1/upload/images', authenticateToken, requireAdmin, upload.array(
   } catch (error) {
     console.error('Image upload error:', error);
     res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
+// ============================================================================
+// DYNAMIC SITEMAP XML ENDPOINT
+// ============================================================================
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Static pages
+    const staticUrls = [
+      { loc: 'https://kleoniverse.com/', changefreq: 'daily', priority: '1.0' },
+      { loc: 'https://kleoniverse.com/shop', changefreq: 'daily', priority: '0.9' },
+      { loc: 'https://kleoniverse.com/products', changefreq: 'daily', priority: '0.9' },
+      { loc: 'https://kleoniverse.com/wishlist', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/cart', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/checkout', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/login', changefreq: 'monthly', priority: '0.6' },
+      { loc: 'https://kleoniverse.com/account', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/our-story', changefreq: 'monthly', priority: '0.6' },
+      { loc: 'https://kleoniverse.com/help', changefreq: 'monthly', priority: '0.5' },
+      { loc: 'https://kleoniverse.com/privacy-policy', changefreq: 'yearly', priority: '0.4' },
+      { loc: 'https://kleoniverse.com/terms-conditions', changefreq: 'yearly', priority: '0.4' }
+    ];
+    
+    // Category pages
+    const categoryUrls = [
+      { loc: 'https://kleoniverse.com/shop/men', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/women', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/unisex', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/unifit', changefreq: 'weekly', priority: '0.8' }
+    ];
+    
+    // Fetch active products from MongoDB
+    const products = await Product.find({ status: 'active' }).select('slug createdAt').lean();
+    
+    // Generate product URLs
+    const productUrls = products.map(product => ({
+      loc: `https://kleoniverse.com/product/${product.slug}`,
+      changefreq: 'weekly',
+      priority: '0.7',
+      lastmod: product.createdAt ? new Date(product.createdAt).toISOString().split('T')[0] : today
+    }));
+    
+    // Build XML
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    
+    // Add static URLs
+    staticUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${today}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    // Add category URLs
+    categoryUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${today}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    // Add product URLs
+    productUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    xml += '</urlset>';
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
+// ============================================================================
+// DYNAMIC SITEMAP XML ENDPOINT
+// ============================================================================
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Static pages
+    const staticUrls = [
+      { loc: 'https://kleoniverse.com/', changefreq: 'daily', priority: '1.0' },
+      { loc: 'https://kleoniverse.com/shop', changefreq: 'daily', priority: '0.9' },
+      { loc: 'https://kleoniverse.com/products', changefreq: 'daily', priority: '0.9' },
+      { loc: 'https://kleoniverse.com/wishlist', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/cart', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/checkout', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/login', changefreq: 'monthly', priority: '0.6' },
+      { loc: 'https://kleoniverse.com/account', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/our-story', changefreq: 'monthly', priority: '0.6' },
+      { loc: 'https://kleoniverse.com/help', changefreq: 'monthly', priority: '0.5' },
+      { loc: 'https://kleoniverse.com/privacy-policy', changefreq: 'yearly', priority: '0.4' },
+      { loc: 'https://kleoniverse.com/terms-conditions', changefreq: 'yearly', priority: '0.4' }
+    ];
+    
+    // Category pages
+    const categoryUrls = [
+      { loc: 'https://kleoniverse.com/shop/men', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/women', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/unisex', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/unifit', changefreq: 'weekly', priority: '0.8' }
+    ];
+    
+    // Fetch active products from MongoDB
+    const products = await Product.find({ status: 'active' }).select('slug createdAt').lean();
+    
+    // Generate product URLs
+    const productUrls = products.map(product => ({
+      loc: `https://kleoniverse.com/product/${product.slug}`,
+      changefreq: 'weekly',
+      priority: '0.7',
+      lastmod: product.createdAt ? new Date(product.createdAt).toISOString().split('T')[0] : today
+    }));
+    
+    // Build XML
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    
+    // Add static URLs
+    staticUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${today}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    // Add category URLs
+    categoryUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${today}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    // Add product URLs
+    productUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    xml += '</urlset>';
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).send('Error generating sitemap');
   }
 });
 
