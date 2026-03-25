@@ -139,7 +139,8 @@ function App() {
           const { cart: apiCart } = await getCart();
           if (apiCart && Array.isArray(apiCart)) {
             setCart(apiCart.map(item => ({
-              id: item.variantId,
+              id: item._id || item.variantId, // Use cart item _id for removal
+              variantId: item.variantId,
               product_id: item.productId,
               name: item.product?.name || item.name,
               price: item.price,
@@ -328,7 +329,8 @@ function App() {
       if (result.success) {
         const { cart: apiCart } = await getCart();
         setCart(apiCart.map(item => ({
-          id: item.variantId,
+          id: item._id || item.variantId,
+          variantId: item.variantId,
           product_id: item.productId,
           name: item.product?.name || item.name,
           price: item.price,
