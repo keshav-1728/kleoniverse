@@ -12,7 +12,7 @@ const productSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['men', 'women', 'unisex'],
+    enum: ['men', 'women', 'unisex', 'unifit'],
     default: 'unisex'
   },
   subcategory: {
@@ -60,6 +60,14 @@ productSchema.virtual('variants', {
   ref: 'ProductVariant',
   localField: '_id',
   foreignField: 'productId'
+});
+
+// Virtual for URL slug
+productSchema.virtual('slug').get(function() {
+  return this.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '') + '-' + this._id.toString().slice(-6);
 });
 
 productSchema.set('toJSON', { virtuals: true });
