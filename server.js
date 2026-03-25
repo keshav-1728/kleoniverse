@@ -401,10 +401,19 @@ app.get('/api/v1/products/:id', async (req, res) => {
 app.get('/api/v1/products/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
+    const mongoose = require('mongoose');
     
-    // First try: Extract product ID from slug (last 6 chars after dash)
+    let product = null;
+    
+    // First try: Extract product ID from slug (last 6 chars after dash) - only if valid ObjectId
     let productId = slug.split('-').slice(-1)[0];
-    let product = await Product.findById(productId);
+    if (mongoose.Types.ObjectId.isValid(productId)) {
+      try {
+        product = await Product.findById(productId);
+      } catch (e) {
+        // Ignore ObjectId cast error, move to next method
+      }
+    }
     
     // Second try: If not found, search by name that matches the slug
     if (!product) {
