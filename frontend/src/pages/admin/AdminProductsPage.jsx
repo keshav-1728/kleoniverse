@@ -33,7 +33,9 @@ const COLOR_OPTIONS = [
 
 const SUBCATEGORY_OPTIONS = {
   men: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets', 'Hoodies', 'Sweaters', 'Kurta', 'Shorts', 'Co-ord Sets'],
-  women: ['Tops', 'Dresses', 'Jeans', 'Skirts', 'Jackets', 'Hoodies', 'Sweaters', 'Kurtas', 'Leggings', 'Co-ord Sets']
+  women: ['Tops', 'Dresses', 'Jeans', 'Skirts', 'Jackets', 'Hoodies', 'Sweaters', 'Kurtas', 'Leggings', 'Co-ord Sets'],
+  unisex: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets', 'Hoodies', 'Sweaters', 'Kurta', 'Shorts', 'Co-ord Sets', 'Tops', 'Dresses', 'Skirts', 'Leggings'],
+  unifit: ['T-Shirts', 'Shirts', 'Jeans', 'Trousers', 'Jackets', 'Hoodies', 'Sweaters', 'Kurta', 'Shorts', 'Co-ord Sets', 'Tops', 'Dresses', 'Skirts', 'Leggings']
 };
 
 export default function AdminProductsPage() {

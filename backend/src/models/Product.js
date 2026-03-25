@@ -12,7 +12,7 @@ const productSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['men', 'women', 'unisex'],
+    enum: ['men', 'women', 'unisex', 'unifit'],
     default: 'unisex'
   },
   subcategory: {
