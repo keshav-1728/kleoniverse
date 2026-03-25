@@ -402,9 +402,35 @@ app.get('/api/v1/products/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
     
-    // Extract product ID from slug (last part after dash)
-    const productId = slug.split('-').slice(-1)[0];
-    const product = await Product.findById(productId);
+    // First try: Extract product ID from slug (last 6 chars after dash)
+    let productId = slug.split('-').slice(-1)[0];
+    let product = await Product.findById(productId);
+    
+    // Second try: If not found, search by name that matches the slug
+    if (!product) {
+      const potentialName = slug
+        .replace(/-[a-f0-9]{6}$/i, '')
+        .replace(/-/g, ' ');
+      
+      product = await Product.findOne({ 
+        $or: [
+          { name: { $regex: potentialName, $options: 'i' } },
+          { name: { $regex: slug.split('-').slice(0, -1).join(' '), $options: 'i' } }
+        ]
+      });
+    }
+    
+    // Third try: Get all products and find one whose slug matches
+    if (!product) {
+      const products = await Product.find({ status: 'active' });
+      for (const p of products) {
+        const productSlug = (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + p._id.toString().slice(-6);
+        if (productSlug === slug || productSlug.startsWith(slug.split('-').slice(0, -1).join('-') + '-')) {
+          product = p;
+          break;
+        }
+      }
+    }
     
     if (!product) {
       return res.status(404).json(apiResponse(false, null, 'Product not found'));
