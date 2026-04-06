@@ -51,7 +51,7 @@ const createPaymentOrder = async (req, res) => {
 };
 
 // @route   POST /api/payment/verify
-// @desc    Verify payment signature
+// @desc    Verify payment signature and update order status
 // @access  Private
 const verifyPayment = async (req, res) => {
   try {
@@ -71,9 +71,28 @@ const verifyPayment = async (req, res) => {
       .digest('hex');
 
     if (generatedSignature === razorpay_signature) {
+      // Signature verified, now update the order status
+      const Order = require('../models/Order');
+
+      const order = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+
+      if (!order) {
+        return res.status(404).json({
+          success: false,
+          message: 'Order not found for the provided Razorpay order ID'
+        });
+      }
+
+      // Update order with payment details and mark as paid
+      order.paymentStatus = 'paid';
+      order.razorpayPaymentId = razorpay_payment_id;
+      await order.save();
+
       res.status(200).json({
         success: true,
-        message: 'Payment verified successfully'
+        message: 'Payment verified and order updated successfully',
+        orderId: order._id,
+        paymentStatus: order.paymentStatus
       });
     } else {
       res.status(400).json({

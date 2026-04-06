@@ -4,8 +4,13 @@
 
 const mongoose = require('mongoose');
 
-// MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://keshavmehrotra2817_db_user:Divyansh%4026@kleoniverse.dpbemb7.mongodb.net/?appName=Kleoniverse';
+// MongoDB connection - MUST be set via environment variable
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('ERROR: MONGODB_URI environment variable is required');
+  process.exit(1);
+}
 
 // Models
 const Product = require('./src/models/Product');

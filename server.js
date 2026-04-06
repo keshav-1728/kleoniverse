@@ -1526,14 +1526,21 @@ app.put('/api/v1/admin/variants/:id', authenticateToken, requireAdmin, async (re
 // Delete product (admin)
 app.delete('/api/v1/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    console.log('Delete product request:', req.params.id, 'by user:', req.userId);
+    const product = await Product.findById(req.params.id);
     if (!product) {
+      console.log('Product not found:', req.params.id);
       return res.status(404).json(apiResponse(false, null, 'Product not found'));
     }
-    
+    console.log('Found product to delete:', product.name);
+
+    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+
     // Delete associated variants
-    await ProductVariant.deleteMany({ productId: req.params.id });
-    
+    const deletedVariants = await ProductVariant.deleteMany({ productId: req.params.id });
+    console.log('Deleted variants count:', deletedVariants.deletedCount);
+
+    console.log('Product deleted successfully:', deletedProduct.name);
     res.json(apiResponse(true, null, 'Product deleted successfully'));
   } catch (error) {
     console.error('Admin delete product error:', error);
