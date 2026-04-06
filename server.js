@@ -2016,6 +2016,24 @@ app.get('/sitemap.xml', async (req, res) => {
 });
 
 // ============================================================================
+// SERVE FRONTEND STATIC FILES
+// ============================================================================
+
+const path = require('path');
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, 'frontend/build')));
+
+// Catch all handler: send back React's index.html file for client-side routing
+// Exclude API routes
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, message: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(__dirname, 'frontend/build/index.html'));
+});
+
+// ============================================================================
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 
