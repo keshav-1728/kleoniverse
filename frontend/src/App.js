@@ -22,6 +22,7 @@ import AccountDashboardPage from '@/pages/AccountDashboardPage';
 import OrderTrackingPage from '@/pages/OrderTrackingPage';
 import SearchResultsPage from '@/pages/SearchResultsPage';
 import OrderConfirmationPage from '@/pages/OrderConfirmationPage';
+import NotFoundPage from '@/pages/NotFoundPage';
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
 import AdminOrdersPage from '@/pages/admin/AdminOrdersPage';
 import AdminUsersPage from '@/pages/admin/AdminUsersPage';
@@ -77,6 +78,7 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
         <Route path="/terms" element={<TermsAndConditionsPage />} />
         <Route path="/account" element={<AccountDashboardPage />} />
         <Route path="/order-tracking/:orderId" element={<OrderTrackingPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
       {!isAdminRoute && <Footer />}
