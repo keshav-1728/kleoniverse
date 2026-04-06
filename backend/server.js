@@ -12,6 +12,24 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 require('dotenv').config();
 
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
+  api_key: process.env.CLOUDINARY_API_KEY || 'your-api-key',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'your-api-secret'
+});
+
+// Multer storage configuration for Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'kleoniverse-products',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+  }
+});
+
+const upload = multer({ storage: storage });
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -63,9 +81,7 @@ app.use(cors({
     if (allowedOrigins.includes(origin) || allowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
-      // Instead of blocking, just allow all for now to debug
-      console.log('CORS blocked origin:', origin);
-      callback(null, true);
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true
@@ -401,25 +417,18 @@ app.get('/api/v1/products/:id', async (req, res) => {
 app.get('/api/v1/products/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
-    const mongoose = require('mongoose');
     
-    let product = null;
-    
-    // First try: Extract product ID from slug (last 6 chars after dash) - only if valid ObjectId
+    // First try: Extract product ID from slug (last 6 chars after dash)
+    // This works for products created after slug feature was added
     let productId = slug.split('-').slice(-1)[0];
-    if (mongoose.Types.ObjectId.isValid(productId)) {
-      try {
-        product = await Product.findById(productId);
-      } catch (e) {
-        // Ignore ObjectId cast error, move to next method
-      }
-    }
+    let product = await Product.findById(productId);
     
     // Second try: If not found, search by name that matches the slug
     if (!product) {
+      // Convert slug back to potential product name
       const potentialName = slug
-        .replace(/-[a-f0-9]{6}$/i, '')
-        .replace(/-/g, ' ');
+        .replace(/-[a-f0-9]{6}$/i, '') // Remove the ID suffix
+        .replace(/-/g, ' '); // Replace dashes with spaces
       
       product = await Product.findOne({ 
         $or: [
@@ -469,15 +478,7 @@ app.get('/api/v1/products/slug/:slug', async (req, res) => {
         images: product.images || [],
         created_at: product.createdAt,
         sizes: sizes,
-        colors: colors,
-        variants: variants.map(v => ({
-          id: v._id,
-          size: v.size,
-          color: v.color,
-          price: v.price,
-          stock: v.stock,
-          image: v.image
-        }))
+        colors: colors
       }
     }, 'Product fetched successfully'));
   } catch (error) {
@@ -1922,6 +1923,7 @@ app.get('/sitemap.xml', async (req, res) => {
 });
 
 // ============================================================================
+<<<<<<< HEAD
 // DYNAMIC SITEMAP XML ENDPOINT
 // ============================================================================
 
@@ -2009,6 +2011,8 @@ app.get('/sitemap.xml', async (req, res) => {
 });
 
 // ============================================================================
+=======
+>>>>>>> eef5d0578fc8b31acba8533fc65291cd6fc5a585
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 
