@@ -65,7 +65,7 @@ export default function CartPage({ cart, onUpdateQuantity, onRemoveItem }) {
                   src={item.image} 
                   alt={item.name}
                   className="w-32 h-40 object-cover rounded-lg bg-muted cursor-pointer"
-                  onClick={() => navigate(`/product/${item.id}`)}
+                  onClick={() => navigate(`/product/${(item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product'}-${(item.id || '').slice(-6)}`)}
                 />
                 <div className="flex-1 flex flex-col">
                   <div className="flex justify-between">

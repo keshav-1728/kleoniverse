@@ -1,11 +1,11 @@
-import { Heart, Eye } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishlist }) => {
+export const ProductCard = ({ product, wishlist = [], onToggleWishlist }) => {
   const navigate = useNavigate();
   const [currentImage, setCurrentImage] = useState(0);
   
@@ -37,7 +37,7 @@ export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishl
         className="aspect-[3/4] overflow-hidden rounded-xl bg-muted relative shadow-card hover:shadow-card-hover transition-shadow duration-300"
         onMouseEnter={() => images[1] && setCurrentImage(1)}
         onMouseLeave={() => setCurrentImage(0)}
-        onClick={() => navigate(`/product/${product.id}`)}
+        onClick={() => navigate(`/product/${(product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product'}-${(product.id || '').slice(-6)}`)}
       >
         <img 
           src={currentImg} 
@@ -56,18 +56,6 @@ export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishl
             {discount}% OFF
           </Badge>
         )}
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onQuickView(product);
-          }}
-          data-testid={`quick-view-${product.id}`}
-          className="quick-view-btn absolute inset-x-4 bottom-4 mx-auto w-full max-w-[200px] h-11 bg-background/95 backdrop-blur-sm rounded-full flex items-center justify-center gap-2 font-semibold text-sm uppercase tracking-wide hover:bg-primary hover:text-primary-foreground transition-all duration-300"
-        >
-          <Eye className="w-4 h-4" />
-          Quick View
-        </button>
       </div>
 
       <button
@@ -82,7 +70,7 @@ export const ProductCard = ({ product, onQuickView, wishlist = [], onToggleWishl
 
       <div className="flex flex-col gap-1.5">
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-          {product.brand || 'Kleoniverse'}
+          {product.brand || 'Kleoni Verse'}
         </p>
         <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors duration-200">
           {product.name}

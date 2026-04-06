@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 const statusOptions = ['pending', 'approved', 'rejected', 'completed', 'refunded'];
 
@@ -187,7 +187,8 @@ export default function AdminReturnsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Returns Table */}
         <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-500">Return ID</th>
@@ -259,8 +260,9 @@ export default function AdminReturnsPage() {
                 ))
               )}
             </tbody>
-          </table>
-        </div>
+            </table>
+            </div>
+          </div>
       </div>
 
       {/* Return Details Modal */}

@@ -1,0 +1,24 @@
+# Robots.txt for Kleoni Verse
+# https://kleoniverse.com
+
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://kleoniverse.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /*?utm_*
+Disallow: /*?ref=*
+
+# Crawl-delay (optional, for politeness)
+Crawl-delay: 1
+
+# Host directive
+Host: https://kleoniverse.com
+
+# Sitemap indexes (if you have multiple sitemaps)
+# Sitemap: https://kleoniverse.com/sitemap-products.xml
+# Sitemap: https://kleoniverse.com/sitemap-categories.xml

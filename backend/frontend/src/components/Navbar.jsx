@@ -30,6 +30,7 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
   const menuItems = [
     { label: 'Men', path: '/category/men' },
     { label: 'Women', path: '/category/women' },
+    { label: 'Unifit', path: '/category/unifit' },
     { label: 'New Arrivals', path: '/new-arrivals' },
     { label: 'Sale', path: '/sale' },
   ];
@@ -64,8 +65,10 @@ export const Navbar = ({ cartCount = 0, onCartOpen, wishlistCount = 0, isAuthent
               </SheetContent>
             </Sheet>
 
-            <Link to="/" className="font-display font-bold text-xl lg:text-2xl tracking-tight hover:opacity-80 transition-opacity">
-              KLEONIVERSE
+            <Link to="/" className="flex items-center gap-2">
+              <span className="font-display font-extrabold text-xl lg:text-2xl tracking-tight">
+                Kleoni Verse
+              </span>
             </Link>
 
             <nav className="hidden lg:flex items-center gap-8">

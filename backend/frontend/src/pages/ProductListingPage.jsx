@@ -8,10 +8,9 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { SlidersHorizontal, Loader2 } from 'lucide-react';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 export default function ProductListingPage({ 
-  onQuickView, 
   wishlist, 
   onToggleWishlist,
   sort: initialSort
@@ -28,7 +27,7 @@ export default function ProductListingPage({
   const [page, setPage] = useState(1);
   const itemsPerPage = 12;
 
-  const categoryName = categoryId === 'men' ? 'Men' : categoryId === 'women' ? 'Women' : 'All Products';
+  const categoryName = categoryId === 'men' ? 'Men' : categoryId === 'women' ? 'Women' : categoryId === 'unifit' ? 'Unifit' : 'All Products';
 
   // Fetch products from API
   useEffect(() => {
@@ -153,7 +152,6 @@ export default function ProductListingPage({
                     <ProductCard
                       key={product.id}
                       product={product}
-                      onQuickView={onQuickView}
                       wishlist={wishlist}
                       onToggleWishlist={onToggleWishlist}
                     />

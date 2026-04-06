@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { CartDrawer } from '@/components/CartDrawer';
-import { QuickViewModal } from '@/components/QuickViewModal';
+import { ScrollToTop } from '@/components/ScrollToTop';
 import AdminRoute from '@/components/AdminRoute';
 import AdminLayout from '@/components/AdminLayout';
 import HomePage from '@/pages/HomePage';
@@ -30,12 +30,13 @@ import AdminReturnsPage from '@/pages/admin/AdminReturnsPage';
 import { getCart, addToCart as apiAddToCart, removeFromCart as apiRemoveFromCart, updateCartQuantity as apiUpdateCartQuantity, getWishlist, addToWishlist as apiAddToWishlist, removeFromWishlist as apiRemoveFromWishlist } from '@/services/apiService';
 import '@/App.css';
 
-function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCartDrawerOpen, quickViewProduct, setQuickViewProduct, isAuthenticated, setIsAuthenticated, user, setUser, handleLogout, handleAddToCart, handleUpdateQuantity, handleRemoveItem, handleToggleWishlist }) {
+function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCartDrawerOpen, isAuthenticated, setIsAuthenticated, user, setUser, handleLogout, handleAddToCart, handleUpdateQuantity, handleRemoveItem, handleToggleWishlist }) {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
   
   return (
     <div className="App">
+      <ScrollToTop />
       {!isAdminRoute && (
         <Navbar
           cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
@@ -55,15 +56,15 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="products" element={<AdminProductsPage />} />
         </Route>
-        <Route path="/" element={<HomePage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
+        <Route path="/" element={<HomePage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/our-story" element={<OurStoryPage />} />
-        <Route path="/products" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
-        <Route path="/new-arrivals" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} sort="new" />} />
-        <Route path="/category/:categoryId" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
-        <Route path="/sale" element={<ProductListingPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
-        <Route path="/product/:productId" element={<ProductDetailPage onAddToCart={handleAddToCart} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onQuickView={setQuickViewProduct} onOpenCart={() => setCartDrawerOpen(true)} />} />
-        <Route path="/search" element={<SearchResultsPage onQuickView={setQuickViewProduct} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
-        <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onQuickView={setQuickViewProduct} />} />
+        <Route path="/products" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
+        <Route path="/new-arrivals" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} sort="new" />} />
+        <Route path="/category/:categoryId" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
+        <Route path="/sale" element={<ProductListingPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
+        <Route path="/product/:slug" element={<ProductDetailPage onAddToCart={handleAddToCart} wishlist={wishlist} onToggleWishlist={handleToggleWishlist} onOpenCart={() => setCartDrawerOpen(true)} />} />
+        <Route path="/search" element={<SearchResultsPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
+        <Route path="/wishlist" element={<WishlistPage wishlist={wishlist} onToggleWishlist={handleToggleWishlist} />} />
         <Route path="/cart" element={<CartPage cart={cart} onUpdateQuantity={handleUpdateQuantity} onRemoveItem={handleRemoveItem} />} />
         <Route path="/checkout" element={<CheckoutPage cart={cart} setCart={setCart} onLogin={handleAddToCart} />} />
         <Route path="/order-confirmation/:orderId" element={<OrderConfirmationPage />} />
@@ -86,16 +87,6 @@ function AppRoutes({ cart, setCart, wishlist, setWishlist, cartDrawerOpen, setCa
         onClose={() => setCartDrawerOpen(false)}
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
-      />
-
-      <QuickViewModal
-        open={!!quickViewProduct}
-        onClose={() => setQuickViewProduct(null)}
-        product={quickViewProduct}
-        onAddToCart={handleAddToCart}
-        wishlist={wishlist}
-        onToggleWishlist={handleToggleWishlist}
-        onOpenCart={() => setCartDrawerOpen(true)}
       />
 
       <Toaster position="top-center" richColors />
@@ -136,7 +127,6 @@ function App() {
     }
   });
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-  const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(parsedIsAuth);
   const [user, setUser] = useState(parsedUser);
   const [loading, setLoading] = useState(false);
@@ -149,7 +139,8 @@ function App() {
           const { cart: apiCart } = await getCart();
           if (apiCart && Array.isArray(apiCart)) {
             setCart(apiCart.map(item => ({
-              id: item.variantId,
+              id: item._id || item.variantId, // Use cart item _id for removal
+              variantId: item.variantId,
               product_id: item.productId,
               name: item.product?.name || item.name,
               price: item.price,
@@ -338,7 +329,8 @@ function App() {
       if (result.success) {
         const { cart: apiCart } = await getCart();
         setCart(apiCart.map(item => ({
-          id: item.variantId,
+          id: item._id || item.variantId,
+          variantId: item.variantId,
           product_id: item.productId,
           name: item.product?.name || item.name,
           price: item.price,
@@ -390,8 +382,6 @@ function App() {
         setWishlist={setWishlist}
         cartDrawerOpen={cartDrawerOpen}
         setCartDrawerOpen={setCartDrawerOpen}
-        quickViewProduct={quickViewProduct}
-        setQuickViewProduct={setQuickViewProduct}
         isAuthenticated={isAuthenticated}
         setIsAuthenticated={setIsAuthenticated}
         user={user}

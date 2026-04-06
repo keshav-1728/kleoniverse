@@ -12,24 +12,6 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 require('dotenv').config();
 
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
-  api_key: process.env.CLOUDINARY_API_KEY || 'your-api-key',
-  api_secret: process.env.CLOUDINARY_API_SECRET || 'your-api-secret'
-});
-
-// Multer storage configuration for Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'kleoniverse-products',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
-  }
-});
-
-const upload = multer({ storage: storage });
-
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -81,7 +63,9 @@ app.use(cors({
     if (allowedOrigins.includes(origin) || allowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      // Instead of blocking, just allow all for now to debug
+      console.log('CORS blocked origin:', origin);
+      callback(null, true);
     }
   },
   credentials: true
@@ -417,18 +401,25 @@ app.get('/api/v1/products/:id', async (req, res) => {
 app.get('/api/v1/products/slug/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
+    const mongoose = require('mongoose');
     
-    // First try: Extract product ID from slug (last 6 chars after dash)
-    // This works for products created after slug feature was added
+    let product = null;
+    
+    // First try: Extract product ID from slug (last 6 chars after dash) - only if valid ObjectId
     let productId = slug.split('-').slice(-1)[0];
-    let product = await Product.findById(productId);
+    if (mongoose.Types.ObjectId.isValid(productId)) {
+      try {
+        product = await Product.findById(productId);
+      } catch (e) {
+        // Ignore ObjectId cast error, move to next method
+      }
+    }
     
     // Second try: If not found, search by name that matches the slug
     if (!product) {
-      // Convert slug back to potential product name
       const potentialName = slug
-        .replace(/-[a-f0-9]{6}$/i, '') // Remove the ID suffix
-        .replace(/-/g, ' '); // Replace dashes with spaces
+        .replace(/-[a-f0-9]{6}$/i, '')
+        .replace(/-/g, ' ');
       
       product = await Product.findOne({ 
         $or: [
@@ -478,7 +469,15 @@ app.get('/api/v1/products/slug/:slug', async (req, res) => {
         images: product.images || [],
         created_at: product.createdAt,
         sizes: sizes,
-        colors: colors
+        colors: colors,
+        variants: variants.map(v => ({
+          id: v._id,
+          size: v.size,
+          color: v.color,
+          price: v.price,
+          stock: v.stock,
+          image: v.image
+        }))
       }
     }, 'Product fetched successfully'));
   } catch (error) {
@@ -1686,14 +1685,21 @@ app.put('/api/v1/admin/variants/:id', authenticateToken, requireAdmin, async (re
 // Delete product (admin)
 app.delete('/api/v1/admin/products/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    console.log('Delete product request:', req.params.id, 'by user:', req.userId);
+    const product = await Product.findById(req.params.id);
     if (!product) {
+      console.log('Product not found:', req.params.id);
       return res.status(404).json(apiResponse(false, null, 'Product not found'));
     }
-    
+    console.log('Found product to delete:', product.name);
+
+    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+
     // Delete associated variants
-    await ProductVariant.deleteMany({ productId: req.params.id });
-    
+    const deletedVariants = await ProductVariant.deleteMany({ productId: req.params.id });
+    console.log('Deleted variants count:', deletedVariants.deletedCount);
+
+    console.log('Product deleted successfully:', deletedProduct.name);
     res.json(apiResponse(true, null, 'Product deleted successfully'));
   } catch (error) {
     console.error('Admin delete product error:', error);
@@ -1923,7 +1929,6 @@ app.get('/sitemap.xml', async (req, res) => {
 });
 
 // ============================================================================
-<<<<<<< HEAD
 // DYNAMIC SITEMAP XML ENDPOINT
 // ============================================================================
 
@@ -2011,8 +2016,24 @@ app.get('/sitemap.xml', async (req, res) => {
 });
 
 // ============================================================================
-=======
->>>>>>> eef5d0578fc8b31acba8533fc65291cd6fc5a585
+// SERVE FRONTEND STATIC FILES
+// ============================================================================
+
+const path = require('path');
+
+// Serve static files from the React app build directory
+app.use(express.static(path.join(__dirname, '../frontend/build')));
+
+// Catch all handler: send back React's index.html file for client-side routing
+// Exclude API routes
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ success: false, message: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+});
+
+// ============================================================================
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 

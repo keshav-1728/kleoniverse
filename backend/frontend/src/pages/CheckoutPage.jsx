@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { MapPin, Lock, Plus, Loader2 } from 'lucide-react';
 import { saveAddress, createOrder } from '@/services/apiService';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 export default function CheckoutPage({ cart, onLogin, setCart }) {
   const navigate = useNavigate();

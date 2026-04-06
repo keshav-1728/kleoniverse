@@ -33,6 +33,25 @@ const upload = multer({ storage: storage });
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Cloudinary configuration
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
+  api_key: process.env.CLOUDINARY_API_KEY || 'your-api-key',
+  api_secret: process.env.CLOUDINARY_API_SECRET || 'your-api-secret'
+});
+
+// Multer storage configuration for Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'kleoniverse-products',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    transformation: [{ width: 1200, height: 1200, crop: 'limit' }]
+  }
+});
+
+const upload = multer({ storage: storage });
+
 // Import Models
 const User = require('./src/models/User');
 const Product = require('./src/models/Product');
@@ -1335,6 +1354,31 @@ app.get('/api/v1/admin/users', authenticateToken, requireAdmin, async (req, res)
   }
 });
 
+// Update user role (admin)
+app.put('/api/v1/admin/users/:id/role', authenticateToken, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!role || !['user', 'admin'].includes(role)) {
+      return res.status(400).json(apiResponse(false, null, 'Invalid role'));
+    }
+    
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json(apiResponse(false, null, 'User not found'));
+    }
+    
+    user.role = role;
+    await user.save();
+    
+    res.json(apiResponse(true, { user: { id: user._id, name: user.name, email: user.email, role: user.role } }, 'User role updated'));
+  } catch (error) {
+    console.error('Admin update user role error:', error);
+    res.status(500).json(apiResponse(false, null, error.message));
+  }
+});
+
 // Get all orders (admin)
 app.get('/api/v1/admin/orders', authenticateToken, requireAdmin, async (req, res) => {
   try {
@@ -1879,6 +1923,96 @@ app.get('/sitemap.xml', async (req, res) => {
 });
 
 // ============================================================================
+<<<<<<< HEAD
+// DYNAMIC SITEMAP XML ENDPOINT
+// ============================================================================
+
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Static pages
+    const staticUrls = [
+      { loc: 'https://kleoniverse.com/', changefreq: 'daily', priority: '1.0' },
+      { loc: 'https://kleoniverse.com/shop', changefreq: 'daily', priority: '0.9' },
+      { loc: 'https://kleoniverse.com/products', changefreq: 'daily', priority: '0.9' },
+      { loc: 'https://kleoniverse.com/wishlist', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/cart', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/checkout', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/login', changefreq: 'monthly', priority: '0.6' },
+      { loc: 'https://kleoniverse.com/account', changefreq: 'weekly', priority: '0.7' },
+      { loc: 'https://kleoniverse.com/our-story', changefreq: 'monthly', priority: '0.6' },
+      { loc: 'https://kleoniverse.com/help', changefreq: 'monthly', priority: '0.5' },
+      { loc: 'https://kleoniverse.com/privacy-policy', changefreq: 'yearly', priority: '0.4' },
+      { loc: 'https://kleoniverse.com/terms-conditions', changefreq: 'yearly', priority: '0.4' }
+    ];
+    
+    // Category pages
+    const categoryUrls = [
+      { loc: 'https://kleoniverse.com/shop/men', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/women', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/unisex', changefreq: 'weekly', priority: '0.8' },
+      { loc: 'https://kleoniverse.com/shop/unifit', changefreq: 'weekly', priority: '0.8' }
+    ];
+    
+    // Fetch active products from MongoDB
+    const products = await Product.find({ status: 'active' }).select('slug createdAt').lean();
+    
+    // Generate product URLs
+    const productUrls = products.map(product => ({
+      loc: `https://kleoniverse.com/product/${product.slug}`,
+      changefreq: 'weekly',
+      priority: '0.7',
+      lastmod: product.createdAt ? new Date(product.createdAt).toISOString().split('T')[0] : today
+    }));
+    
+    // Build XML
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+    
+    // Add static URLs
+    staticUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${today}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    // Add category URLs
+    categoryUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${today}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    // Add product URLs
+    productUrls.forEach(url => {
+      xml += '  <url>\n';
+      xml += `    <loc>${url.loc}</loc>\n`;
+      xml += `    <lastmod>${url.lastmod}</lastmod>\n`;
+      xml += `    <changefreq>${url.changefreq}</changefreq>\n`;
+      xml += `    <priority>${url.priority}</priority>\n`;
+      xml += '  </url>\n';
+    });
+    
+    xml += '</urlset>';
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).send('Error generating sitemap');
+  }
+});
+
+// ============================================================================
+=======
+>>>>>>> eef5d0578fc8b31acba8533fc65291cd6fc5a585
 // CONNECT TO MONGODB AND START SERVER
 // ============================================================================
 

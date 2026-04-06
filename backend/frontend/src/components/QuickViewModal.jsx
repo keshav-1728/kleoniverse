@@ -168,7 +168,7 @@ export const QuickViewModal = ({ open, onClose, product, onAddToCart, wishlist =
                   variant="outline"
                   onClick={() => {
                     onClose();
-                    navigate(`/product/${product.id}`);
+                    navigate(`/product/${(product.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'product'}-${(product.id || '').slice(-6)}`);
                   }}
                   className="flex-1 rounded-full font-bold uppercase tracking-wide"
                   size="lg"

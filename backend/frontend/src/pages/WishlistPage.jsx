@@ -6,8 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 export default function WishlistPage({ 
   wishlist, 
-  onToggleWishlist, 
-  onQuickView 
+  onToggleWishlist 
 }) {
   const navigate = useNavigate();
   const wishlistProducts = products.filter(p => wishlist.includes(p.id));
@@ -42,7 +41,6 @@ export default function WishlistPage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />

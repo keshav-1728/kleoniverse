@@ -9,16 +9,15 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { ProductCard } from '@/components/ProductCard';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 export default function ProductDetailPage({ 
   onAddToCart, 
   wishlist, 
   onToggleWishlist,
-  onQuickView,
   onOpenCart
 }) {
-  const { productId } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,7 +27,7 @@ export default function ProductDetailPage({
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_URL}/products/${productId}`);
+        const res = await fetch(`${API_URL}/products/slug/${slug}`);
         const data = await res.json();
         
         if (data.success && data.data && data.data.product) {
@@ -38,7 +37,7 @@ export default function ProductDetailPage({
           const relatedRes = await fetch(`${API_URL}/products?category=${data.data.product.category}&limit=4`);
           const relatedData = await relatedRes.json();
           if (relatedData.success && relatedData.data) {
-            setRelatedProducts(relatedData.data.products.filter(p => p.id !== productId));
+            setRelatedProducts(relatedData.data.products.filter(p => p.id !== data.data.product.id));
           }
         } else {
           setProduct(null);
@@ -51,10 +50,10 @@ export default function ProductDetailPage({
       }
     };
     
-    if (productId) {
+    if (slug) {
       fetchProduct();
     }
-  }, [productId]);
+  }, [slug]);
   
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -340,7 +339,6 @@ export default function ProductDetailPage({
                 <ProductCard
                   key={product.id}
                   product={product}
-                  onQuickView={onQuickView}
                   wishlist={wishlist}
                   onToggleWishlist={onToggleWishlist}
                 />

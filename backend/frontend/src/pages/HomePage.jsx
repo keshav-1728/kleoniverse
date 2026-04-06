@@ -1,19 +1,18 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ProductCard } from '@/components/ProductCard';
-import { categories, heroSlides } from '@/data/mockData';
+import { categories, heroSlides, products as mockProducts } from '@/data/mockData';
 import { ArrowRight, Leaf, Award, Truck, RefreshCw } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import apiService from '@/services/api';
 
 export default function HomePage({ 
-  onQuickView, 
   wishlist, 
   onToggleWishlist 
 }) {
   const navigate = useNavigate();
   const [currentHero, setCurrentHero] = useState(0);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState(mockProducts);
   const [loading, setLoading] = useState(true);
 
   // Fetch products from API
@@ -44,19 +43,19 @@ export default function HomePage({
       id: 'streetwear',
       name: 'Streetwear',
       description: 'Urban essentials',
-      image: 'https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?q=80&w=800&auto=format&fit=crop',
     },
     {
       id: 'minimalist',
       name: 'Minimalist',
       description: 'Clean lines, timeless',
-      image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1503342394128-c104d54dba01?q=80&w=800&auto=format&fit=crop',
     },
     {
       id: 'athletic',
       name: 'Athletic',
       description: 'Movement & comfort',
-      image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop',
+      image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?q=80&w=800&auto=format&fit=crop',
     },
   ];
 
@@ -72,13 +71,13 @@ export default function HomePage({
       id: 'weekend',
       name: 'Weekend Vibes',
       description: 'Casual comfort',
-      image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1516762689617-e1cffcef479d?w=800&auto=format&fit=crop&q=80',
     },
     {
       id: 'nightout',
       name: 'Night Out',
       description: 'Make a statement',
-      image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=800&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&auto=format&fit=crop&q=80',
     },
   ];
 
@@ -123,7 +122,7 @@ export default function HomePage({
                 backgroundImage: `url(${categories[0].image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                minHeight: '300px'
+                minHeight: '320px'
               }}
             >
               <div className="hero-gradient-overlay absolute inset-0" />
@@ -142,7 +141,7 @@ export default function HomePage({
                 backgroundImage: `url(${categories[1].image})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                minHeight: '300px'
+                minHeight: '320px'
               }}
             >
               <div className="hero-gradient-overlay absolute inset-0" />
@@ -225,9 +224,7 @@ export default function HomePage({
               <div
                 key={category.id}
                 onClick={() => navigate(`/category/${category.id}`)}
-                className={`relative overflow-hidden rounded-2xl cursor-pointer group ${
-                  index === 0 ? 'md:row-span-2 min-h-[400px]' : 'min-h-[200px]'
-                }`}
+                className="relative overflow-hidden rounded-2xl cursor-pointer group min-h-[300px]"
               >
                 <img 
                   src={category.image} 
@@ -324,7 +321,6 @@ export default function HomePage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />
@@ -357,7 +353,6 @@ export default function HomePage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />
@@ -462,7 +457,7 @@ export default function HomePage({
             
             <div className="relative max-w-2xl mx-auto text-center">
               <h2 className="font-display font-bold text-3xl lg:text-4xl tracking-tight mb-4">
-                Join the <span className="text-primary">Kleoniverse</span>
+                Join the <span className="text-primary">Kleoni Verse</span>
               </h2>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 Get early access to new drops, exclusive offers, and style inspiration delivered to your inbox.
@@ -513,7 +508,6 @@ export default function HomePage({
               <ProductCard
                 key={product.id}
                 product={product}
-                onQuickView={onQuickView}
                 wishlist={wishlist}
                 onToggleWishlist={onToggleWishlist}
               />

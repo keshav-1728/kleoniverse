@@ -6,7 +6,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 // Base URL from environment or default
-const BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://kleoniverse-backend.onrender.com/api/v1';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -38,6 +38,7 @@ api.interceptors.response.use(
       
       // Handle 401 - Unauthorized
       if (status === 401) {
+        localStorage.removeItem('kleoni_token');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -91,12 +92,17 @@ export const apiService = {
 
   // Set auth token
   setToken: (token: string) => {
+    localStorage.setItem('kleoni_token', token);
     localStorage.setItem('token', token);
   },
 
   // Remove auth token
   removeToken: () => {
+    localStorage.removeItem('kleoni_token');
     localStorage.removeItem('token');
+    localStorage.removeItem('kleoni_user');
+    localStorage.removeItem('user');
+    localStorage.removeItem('kleoni_user_id');
   },
 
   // Get current token

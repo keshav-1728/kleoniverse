@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
             {/* Introduction */}
             <div className="mb-12">
               <p className="text-muted-foreground leading-relaxed">
-                At Kleoniverse, we value your privacy and are committed to protecting your personal information. 
+                At Kleoni Verse, we value your privacy and are committed to protecting your personal information. 
                 This Privacy Policy outlines how we collect, use, disclose, and safeguard your data when you visit 
                 our website and make purchases from our store.
               </p>
