@@ -348,7 +348,11 @@ export default function ProductDetailPage({
         )}
       </div>
 
-      <SizeGuideModal open={sizeGuideOpen} onClose={() => setSizeGuideOpen(false)} />
+      <SizeGuideModal
+        open={sizeGuideOpen}
+        onClose={() => setSizeGuideOpen(false)}
+        defaultCategory={product?.category === 'unifit' ? 'unisex' : (product?.category || 'unisex')}
+      />
     </div>
   );
 }
