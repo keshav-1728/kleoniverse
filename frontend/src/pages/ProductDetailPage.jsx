@@ -352,6 +352,7 @@ export default function ProductDetailPage({
         open={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}
         defaultCategory={product?.category === 'unifit' ? 'unisex' : (product?.category || 'unisex')}
+        productSubcategory={product?.subcategory || ''}
       />
     </div>
   );
