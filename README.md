@@ -189,51 +189,7 @@ npm start
 2. Create database: `CREATE DATABASE socialhood;`
 3. Tables will be auto-created by Sequelize on first run
 
-## 📡 API Endpoints
 
-### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Register new user |
-| POST | `/api/v1/auth/login` | Login user |
-| GET | `/api/v1/auth/profile` | Get current user |
-| PUT | `/api/v1/auth/profile` | Update profile |
-| POST | `/api/v1/auth/change-password` | Change password |
-
-### Products
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/products` | List products (with filters) |
-| GET | `/api/v1/products/:id` | Get product details |
-| GET | `/api/v1/products/featured` | Featured products |
-| GET | `/api/v1/products/new-arrivals` | New arrivals |
-| POST | `/api/v1/products` | Create product (Admin) |
-| PUT | `/api/v1/products/:id` | Update product (Admin) |
-| DELETE | `/api/v1/products/:id` | Delete product (Admin) |
-
-### Cart
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/cart` | Get cart items |
-| POST | `/api/v1/cart` | Add to cart |
-| PUT | `/api/v1/cart/:id` | Update quantity |
-| DELETE | `/api/v1/cart/:id` | Remove item |
-| DELETE | `/api/v1/cart` | Clear cart |
-
-### Orders
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/orders` | List orders |
-| GET | `/api/v1/orders/:id` | Get order details |
-| POST | `/api/v1/orders` | Create order |
-| POST | `/api/v1/orders/:id/cancel` | Cancel order |
-
-### Wishlist
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/v1/wishlist` | Get wishlist |
-| POST | `/api/v1/wishlist` | Add to wishlist |
-| DELETE | `/api/v1/wishlist/:productId` | Remove from wishlist |
 
 ## 🔑 Roles
 
@@ -250,48 +206,8 @@ Payments are NOT connected yet. To integrate:
 ## 🌍 Deployment
 
 ### Backend (Render/Railway/VPS)
-```bash
-# Build for production
-npm run build
-
-# Start production server
-npm start
-```
 
 ### Frontend (Hostinger Premium)
-```bash
-# Build static files
-npm run build
-
-# Upload 'build' folder to Hostinger
-```
-
-## 🔧 Troubleshooting
-
-### Localhost Access Issues
-
-If you're having trouble opening the website on localhost:
-
-1. **Kill any existing processes on the port:**
-   ```bash
-   # Windows
-   netstat -ano | findstr :3000
-   taskkill /PID <PID> /F
-   ```
-
-2. **Check if emergent has any restrictions:**
-   - Look for `.emergent/markers/` directory
-   - Check if there are any lock files
-
-3. **Clear node_modules and reinstall:**
-   ```bash
-   rm -rf node_modules package-lock.json yarn.lock
-   npm install
-   ```
-
-4. **Ensure correct ports are not blocked:**
-   - Frontend default: 3000
-   - Backend default: 5000
 
 ### Common Errors
 
